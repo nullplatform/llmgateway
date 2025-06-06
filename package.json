@@ -1,0 +1,50 @@
+{
+  "name": "@nullplatform/llm-gateway-monorepo",
+  "version": "1.0.0",
+  "description": "Language Model Gateway - Agnostic proxy for LLM APIs",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "examples/plugins/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev": "npm run dev -w @llm-gateway/core",
+    "test": "npm run test --workspaces",
+    "lint": "eslint packages/*/src/**/*.ts",
+    "clean": "npm run clean --workspaces",
+    "publish:sdk": "npm publish -w @llm-gateway/sdk",
+    "publish:core": "npm publish -w @llm-gateway/core"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.4",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "keywords": [
+    "llm",
+    "ai",
+    "proxy",
+    "gateway",
+    "openai",
+    "anthropic",
+    "ollama"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nullplatform/llm-gateway"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "commander": "^14.0.0"
+  }
+}

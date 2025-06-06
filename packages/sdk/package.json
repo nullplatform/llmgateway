@@ -1,0 +1,39 @@
+{
+  "name": "@nullplatform/llm-gateway-sdk",
+  "version": "1.0.0",
+  "description": "SDK for LLM Gateway plugin development",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "test": "jest"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md"
+  ],
+  "keywords": [
+    "llm",
+    "gateway",
+    "sdk",
+    "plugin",
+    "typescript"
+  ],
+  "devDependencies": {
+    "@types/jest": "^29.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nullplatform/llm-gateway",
+    "directory": "packages/sdk"
+  },
+  "license": "MIT"
+}

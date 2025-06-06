@@ -1,0 +1,73 @@
+# Example LLM Gateway Configuration
+# This demonstrates the new model-based configuration structure
+
+server:
+  host: "0.0.0.0"
+  port: 3000
+  cors:
+    enabled: true
+    origins: ["*"]
+
+availablePlugins:
+  - path: "../plugins/logger/dist/index.js"
+
+# Models are the main routing targets
+# Each model has a provider configuration and can have custom settings
+models:
+  # GPT-4 model with OpenAI provider
+  - name: gpt
+    isDefault: true
+    description: "OpenAI models"
+    provider:
+      type: "openai"
+      config:
+        apiKey: "${OPENAI_API_KEY}"
+        baseUrl: "https://api.openai.com/v1"
+        timeout: 30000
+        retryAttempts: 3
+        bypassModel: true
+    modelConfig:
+      maxTokens: 4096
+      temperature: 0.7
+    metadata:
+      category: "large-language-model"
+      cost_tier: "high"
+  - name: claude
+    isDefault: false
+    description: "Anthropic Claude models"
+    provider:
+      type: "anthropic"
+      config:
+        apiKey: "${ANTHROPIC_API_KEY}"
+        timeout: 30000
+        retryAttempts: 3
+        model: claude-sonnet-4-20250514
+    modelConfig:
+      maxTokens: 4096
+      temperature: 0.7
+    metadata:
+      category: "large-language-model"
+      cost_tier: "high"
+
+plugins:
+  - name: logger
+    type: logger
+    config:
+      level: "info"
+      format: "json"
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  metrics: ["requests", "latency", "errors", "tokens", "costs"]
+  health_check:
+    enabled: true
+    interval: 30
+    endpoint: "/health"
+
+# Logging configuration
+logging:
+  level: "info"  # debug, info, warn, error
+  format: "json"  # json, simple
+  destinations: ["console"]  # console, file
+  file_path: "./logs/gateway.log"
