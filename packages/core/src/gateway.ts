@@ -175,6 +175,9 @@ export class GatewayServer {
             }
         };
     }
+
+    
+
     private async handleStreamingLLMRequest(
         context: IRequestContext,
         model: any,
@@ -238,7 +241,11 @@ export class GatewayServer {
                         }
                     }
                     if(chunk?.usage) {
-                        accumulatedResponse.usage = accumulatedResponse.usage;
+                        if(!accumulatedResponse.usage) {
+                            // @ts-ignore
+                            accumulatedResponse.usage = {};
+                        }
+                        accumulatedResponse.usage = { ...accumulatedResponse.usage, ...chunk?.usage};
                     }
                 }
 
@@ -262,8 +269,11 @@ export class GatewayServer {
                     }
                 }
                 if(finalChunk ) {
+                    //Do not wait is fully async operation
+                    this.pipelineManager.detachedAfterResponse(internalContext);
                     res.end();
                 }
+
 
             }
         });
@@ -295,6 +305,10 @@ export class GatewayServer {
         const resp = await adapter.transformOutput(finalContext.request, req.body, finalContext.response)
         // Send response
         res.send(resp);
+
+        //Do not wait is fully async operation
+        this.pipelineManager.detachedAfterResponse(finalContext);
+
         // Log success
         this.logger.info('Request completed successfully', {
             request_id: context.request_id,

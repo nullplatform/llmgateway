@@ -28,7 +28,7 @@ export interface ILLMRequest {
     stop?: string | string[];
     stream?: boolean;
     tools?: ITool[];
-    tool_choice?: 'none' | 'auto' | { type: 'function'; function: { name: string } };
+    tool_choice?: 'none' | 'auto';
     target_provider: string;
     metadata?: {
         user_id?: string;

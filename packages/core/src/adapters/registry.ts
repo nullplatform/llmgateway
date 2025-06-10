@@ -3,6 +3,7 @@
 import { ILLMApiAdapter } from '@nullplatform/llm-gateway-sdk';
 import { Logger } from '../utils/logger.js';
 import {OpenAIApiAdapter} from "./openai";
+import {AnthropicApiAdapter} from "./antropic";
 
 export class LLMApiAdapterRegistry {
     private adapters: Map<string, ILLMApiAdapter> = new Map();
@@ -20,6 +21,7 @@ export class LLMApiAdapterRegistry {
     private registerBuiltInAdapters(): void {
         // Register built-in adapters
         this.register('openai', new OpenAIApiAdapter());
+        this.register('anthropic', new AnthropicApiAdapter());
 
         this.logger.debug('Built-in input adapters registered', {
             adapters: Array.from(this.adapters.keys())

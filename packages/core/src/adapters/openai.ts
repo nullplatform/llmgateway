@@ -43,7 +43,7 @@ export interface OpenAIRequest {
             parameters?: Record<string, any>;
         };
     }>;
-    tool_choice?: 'none' | 'auto' | { type: 'function'; function: { name: string } };
+    tool_choice?: 'none' | 'auto';
     user?: string;
     logit_bias?: Record<string, number>;
     logprobs?: boolean;
@@ -231,7 +231,19 @@ export class OpenAIApiAdapter implements ILLMApiAdapter<OpenAIRequest, OpenAIRes
                 model: chunk.model,
                 choices: chunk?.content ?  chunk.content.map((choice, index) => ({
                     index,
-                    delta: choice.delta,
+                    delta: {
+                        role: choice.delta?.role,
+                        content: choice.delta?.content,
+                        tool_calls: choice.delta?.tool_calls?.map(tool => ({
+                            id: tool.id,
+                            type: tool.type,
+                            index:  choice.delta?.tool_calls?.length - 1,
+                            function: {
+                                name: tool?.function?.name,
+                                arguments: tool?.function?.arguments
+                            }
+                        }))
+                    },
                     logprobs: choice.logprobs,
                     finish_reason: choice.finish_reason ?? null
                 })) : undefined,

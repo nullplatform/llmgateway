@@ -10,6 +10,7 @@ server:
 
 availablePlugins:
   - path: "../plugins/logger/dist/index.js"
+  - path: "../plugins/regex-hider/dist/index.js"
 
 # Models are the main routing targets
 # Each model has a provider configuration and can have custom settings
@@ -25,7 +26,7 @@ models:
         baseUrl: "https://api.openai.com/v1"
         timeout: 30000
         retryAttempts: 3
-        bypassModel: true
+        model: gpt-4.1-mini
     modelConfig:
       maxTokens: 4096
       temperature: 0.7
@@ -55,6 +56,18 @@ plugins:
     config:
       level: "info"
       format: "json"
+  - name: pii-detection
+    type: regex-hider
+    config:
+      patterns:
+        - pattern: "\\b\\d{3}-\\d{2}-\\d{4}\\b"  # SSN format
+          replacement: "[REDACTED|SSN]"
+        - pattern: "\\b\\d{16}\\b"  # Credit card format
+          replacement: "[REDACTED|CREDIT_CARD]"
+        - pattern: "\\b[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+\\b"  # Email address"  # Credit card format
+          replacement: "[REDACTED|PII]"
+          applyTo: response
+
 
 # Monitoring configuration
 monitoring:

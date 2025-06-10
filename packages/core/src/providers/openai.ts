@@ -1,6 +1,6 @@
 // packages/core/src/providers/openai.ts
 
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios, {AxiosError, AxiosInstance, AxiosRequestConfig} from 'axios';
 import {IProvider, IProviderFactory, ILLMRequest, ILLMResponse, IChunkEmitter} from '@nullplatform/llm-gateway-sdk';
 import {Logger} from '../utils/logger.js';
 import {OpenAIRequest} from "../adapters/openai";
@@ -216,13 +216,14 @@ export class OpenAIProvider implements IProvider {
             })),
             temperature: request.temperature,
             max_tokens: request.max_tokens,
-            top_p: request.top_p,
+            top_p: request.top_p > 0 && request.top_p < 1? request.top_p : undefined,
             frequency_penalty: request.frequency_penalty,
             presence_penalty: request.presence_penalty,
             stop: request.stop,
             stream: request.stream,
             tools: request.tools,
-            tool_choice: request.tool_choice
+            tool_choice: request.tool_choice,
+
         } as OpenAIRequest;
     }
 

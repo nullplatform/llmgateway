@@ -21,6 +21,7 @@ export interface IPluginMetadata {
     name: string;
     version: string;
     description?: string;
+    configurationSchema?: any; // JSON Schema for the plugin configuration
     author?: string;
     homepage?: string;
     keywords?: string[];
@@ -47,6 +48,10 @@ export interface IPlugin {
     beforeModel?(llmRequest: IRequestContext): Promise<IPluginResult>;
 
     afterModel?(llmRequest: IRequestContext): Promise<IPluginResult>;
+
+    afterChunk?(llmRequest: IRequestContext): Promise<IPluginResult>;
+
+    detachedAfterResponse?(llmRequest: IRequestContext): Promise<void>;
 
     configure(config: any): Promise<void>;
 

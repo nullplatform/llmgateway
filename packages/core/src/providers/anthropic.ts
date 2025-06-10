@@ -7,7 +7,7 @@ import {
     ILLMRequest,
     ILLMResponse,
     IUsage,
-    IMessage, IContent
+    IMessage, IContent, IChunkEmitter
 } from '@nullplatform/llm-gateway-sdk';
 import { Logger } from '../utils/logger.js';
 
@@ -43,6 +43,10 @@ interface AnthropicRequest {
     stop_sequences?: string[];
     stream?: boolean;
     system?: string;
+    tool_choice?: {
+        type?: 'auto' | 'none';
+        disable_parallel_tool_use?: boolean;
+    };
     tools: Array<AnthropicTool>;
 }
 
@@ -156,7 +160,7 @@ export class AnthropicProvider implements IProvider {
     private transformToAnthropicRequest(request: ILLMRequest): AnthropicRequest {
         // Extract system message if present
         const messages: Array<AnthropicMessage> = request.messages.map((message) => {
-            let role = message.role;
+            let role = message.role || 'user';
             let content: any = message.content;
             if(message.role === 'system') {
                 role = 'assistant'
@@ -205,6 +209,11 @@ export class AnthropicProvider implements IProvider {
             }))
         };
 
+        if(anthropicRequest.tools?.length > 0) {
+            anthropicRequest.tool_choice = {
+                type: request.tool_choice || 'auto',
+            }
+        }
 
 
         // Add stop sequences
@@ -272,6 +281,9 @@ export class AnthropicProvider implements IProvider {
     }
 
     private mapFinishReason(anthropicReason: string): IContent['finish_reason'] {
+        if(anthropicReason === undefined || anthropicReason === null) {
+            return undefined;
+        }
         switch (anthropicReason) {
             case 'end_turn':
                 return 'stop';
@@ -286,23 +298,168 @@ export class AnthropicProvider implements IProvider {
         }
     }
 
-    async makeStreamRequest(request: ILLMRequest): Promise<ReadableStream> {
-        const anthropicRequest = this.transformToAnthropicRequest(request);
-        anthropicRequest.stream = true;
+    async executeStreaming(request: ILLMRequest, chunkEmitter: IChunkEmitter): Promise<void> {
+        const endpoint = '/v1/messages';
 
         try {
-            const response = await this.client.post('/v1/messages',
-                anthropicRequest,
-                {
-                    responseType: 'stream',
-                    headers: { 'Accept': 'text/event-stream' }
-                }
-            );
+            const anthropicRequest = this.transformToAnthropicRequest(request);
+            // Enable streaming for Anthropic
+            anthropicRequest.stream = true;
 
-            return response.data;
+            const response = await this.client.post(endpoint, anthropicRequest, {
+                    responseType: 'stream'
+                });
+
+
+            let buffer = '';
+            let created = Math.floor(Date.now() / 1000);
+            //Anthropic streams cames as event: name \n data: { ... } \n
+            let lastParsedEvent: string | null = null;
+            response.data.on('data', async (chunk: Buffer) => {
+                buffer += chunk.toString('utf-8');
+
+                // Process complete lines
+                const lines = buffer.split('\n');
+                // Keep the last potentially incomplete line in buffer
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    const trimmedLine = line.trim();
+                    if( trimmedLine.startsWith('event: ')) {
+                        // Handle event lines
+                        lastParsedEvent = trimmedLine.slice(7).trim(); // Remove 'event: ' prefix
+                        continue; // Skip to next line
+                    }
+
+                    await this.processAnthropicStreamLine(
+                        trimmedLine,
+                        lastParsedEvent,
+                        chunkEmitter
+                    );
+
+                }
+            });
+
+            response.data.on('end', async () => {
+                const trimmed = buffer.trim()
+                if( trimmed) {
+                    await this.processAnthropicStreamLine(
+                        trimmed,
+                        lastParsedEvent,
+                        chunkEmitter,
+                        true
+                    );
+                }
+            });
+
+            response.data.on('error', (error: Error) => {
+                this.logger.error('Anthropic stream error', { error });
+                throw error;
+            });
+
+            // Wait for stream to complete
+            await new Promise<void>((resolve, reject) => {
+                response.data.on('end', resolve);
+                response.data.on('error', reject);
+            });
+
         } catch (error) {
-            this.logger.error('Anthropic stream request failed', { error });
+            this.logger.error('Anthropic streaming request failed', {
+                error,
+                request: this.sanitizeRequest(request)
+            });
             throw error;
+        }
+    }
+
+    private async processAnthropicStreamLine(
+        line: string,
+        eventType: string | null,
+        chunkEmitter: IChunkEmitter,
+        lastChunk: boolean = false
+    ): Promise<void> {
+        if (!line.startsWith('data: ')) {
+            return;
+        }
+
+
+        const data = line.slice(6); // Remove 'data: ' prefix
+
+        try {
+            const parsedChunk = JSON.parse(data);
+
+            // Handle different event types from Anthropic streaming
+            switch (eventType) {
+                case 'message_start':
+                case 'content_block_start':
+                case 'content_block_delta':
+                case 'message_delta':
+                    const content = parsedChunk?.content_block || parsedChunk?.delta || parsedChunk?.message?.content;
+                    let delta;
+                    let finish_reason;
+                    if(content.type === 'text' || content.type === 'text_delta') {
+                        delta = {
+                            content: content?.text,
+                            role: content?.role,
+                            stop_reason: this.mapFinishReason(parsedChunk?.stop_reason)
+                        }
+                    } else if(content.type === 'tool_use' || content.type === 'input_json_delta') {
+                        delta = {
+                            role: 'tool',
+                            tool_calls: [{
+                                id: content?.id,
+                                type: 'function',
+                                function: {
+                                    name: content?.name,
+                                    arguments: content?.input ? (Object.keys(content?.input).length > 0 ?  JSON.stringify(content?.input) : undefined) : content.partial_json
+                                }
+                            }],
+                            tool_call_id: content.id
+                        }
+                    } else if(content.stop_reason) {
+                            finish_reason = this.mapFinishReason(content.stop_reason);
+
+                    }
+                    let usage;
+                    const internalUsage = parsedChunk?.usage || parsedChunk?.message?.usage;
+                    if(internalUsage) {
+                        usage = {
+                            prompt_tokens: internalUsage.input_tokens,
+                            completion_tokens: internalUsage.output_tokens,
+                            total_tokens: internalUsage.input_tokens !== undefined && internalUsage.output_tokens !==undefined
+                                ? internalUsage.input_tokens + internalUsage.output_tokens : undefined
+                        }
+                    }
+                    await chunkEmitter.onData({
+                        id: parsedChunk?.message?.id,
+                        object: 'chat.completion.chunk',
+                        model: parsedChunk?.message?.model,
+                        content: [
+                            {
+                                delta: delta,
+                                finish_reason
+                            }
+                        ],
+                        usage
+                    } as ILLMResponse, false); // Emit a chunk with the parsed data
+                    break;
+
+                case 'message_stop':
+                    await chunkEmitter.onData(undefined, true); // Emit final chunk
+
+                default:
+                    // Log unknown event types for debugging
+                    this.logger.debug('Unknown Anthropic stream event type', {
+                        type: parsedChunk.type,
+                        data: parsedChunk
+                    });
+            }
+        } catch (error) {
+            this.logger.error('Failed to parse Anthropic stream chunk', {
+                data,
+                error: error instanceof Error ? error.message : error
+            });
+            // Continue processing instead of throwing - streaming should be resilient
         }
     }
 

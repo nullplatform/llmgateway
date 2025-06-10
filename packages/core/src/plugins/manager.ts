@@ -67,7 +67,7 @@ export class PluginManager {
         this.plugins.push({name: config.name, plugin, config});
     }
 
-    async executePluginFunction(llmRequest: IRequestContext, pluginFunction: string, reverseOrder: boolean = false ): Promise<IPluginPhaseExecution> {
+    async executePluginFunction(llmRequest: IRequestContext, pluginFunction: string, reverseOrder: boolean = false, isDettachedRun: boolean = false ): Promise<void | IPluginPhaseExecution> {
         let request = llmRequest;
         let lastExecution: IPluginResult;
         let startTime = Date.now();
@@ -81,15 +81,20 @@ export class PluginManager {
                     continue;
                 }
                 try {
+
                     const result: IPluginResult = await plugin[pluginFunction](request);
+                    if(isDettachedRun) {
+                        // If this is a detached run, we don't need to process the result further
+                        continue;
+                    }
                     //Update context because plugin can return a modified context or null
                     result.context = {
                         ...llmRequest,
-                        ...(result.context ? result.context : {}),
+                        ...(result?.context ? result.context : {}),
                     }
                     result.context.metadata = {
                         ...llmRequest.metadata,
-                        ...(result.context.metadata ? result.context.metadata : {}),
+                        ...(result?.context?.metadata ? result.context.metadata : {}),
                     }
                     request = result.context;
                     lastExecution = result;
@@ -111,6 +116,9 @@ export class PluginManager {
         }
         const totalExecutionTime = Date.now() - startTime;
         this.logger.debug(`Executed ${pluginFunction} for ${executions.length} plugins in ${totalExecutionTime}ms`);
+        if( isDettachedRun ) {
+            return;
+        }
         return {
             finalResult: lastExecution || { success: true, context: llmRequest },
             totalExecutionTime,
@@ -119,15 +127,21 @@ export class PluginManager {
     }
 
     async beforeModel(llmRequest: IRequestContext): Promise<IPluginPhaseExecution> {
-        return await this.executePluginFunction(llmRequest, 'beforeModel');
+        return await this.executePluginFunction(llmRequest, 'beforeModel') as IPluginPhaseExecution;
     }
 
     async afterModel(llmRequest: IRequestContext): Promise<IPluginPhaseExecution> {
-        return await this.executePluginFunction(llmRequest, 'afterModel', true);
+        return await this.executePluginFunction(llmRequest, 'afterModel', true) as IPluginPhaseExecution;
     }
 
     async afterChunk(llmRequest: IRequestContext) : Promise<IPluginPhaseExecution> {
-        return await this.executePluginFunction(llmRequest, 'afterChunk', true);
+        return await this.executePluginFunction(llmRequest, 'afterChunk', true) as IPluginPhaseExecution;
+    }
+
+    async detachedAfterResponse(llmRequest: IRequestContext) : Promise<void> {
+        //Treat response and accumulated_response as the same because this phase is executed after the response is sent or stream finished
+        llmRequest.response = llmRequest.response || llmRequest.accumulated_response;
+        return await this.executePluginFunction(llmRequest, 'detachedAfterResponse', true, true) as void;
     }
 
     private async matchStringOrRegExp(value: string, pattern: string | RegExp): Promise<boolean> {

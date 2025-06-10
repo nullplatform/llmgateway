@@ -24,8 +24,10 @@ export class LoggerPlugin implements IPlugin {
         return { success: true };
     }
 
-    async afterModel(llmRequest: IRequestContext): Promise<IPluginResult> {
-        console.log('After Model:', llmRequest);
-        return { success: true };
+    async detachedAfterResponse(llmRequest: IRequestContext): Promise<void> {
+        // Log the response details
+        console.log('After Response:', llmRequest.request, llmRequest.response);
     }
+
+
 }
