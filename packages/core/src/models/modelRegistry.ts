@@ -10,19 +10,19 @@ export class ModelRegistry implements IModelRegistry {
     private models: Map<string, IModel> = new Map();
     private defaultModel?: IModel;
     private logger: Logger;
-    private config: GatewayConfig;
+    private modelsConfig: GatewayConfig['models'];
     private providerRegistry: ProviderRegistry;
 
-    constructor(providerRegistry: ProviderRegistry, config: GatewayConfig, logger?: Logger) {
+    constructor(providerRegistry: ProviderRegistry, modelsConfig:  GatewayConfig['models'], logger?: Logger) {
         this.providerRegistry = providerRegistry;
         this.logger = logger || new Logger();
-        this.config = config;
+        this.modelsConfig = modelsConfig;
     }
 
     async initializeModels(): Promise<void> {
         try {
             // Load models from configuration
-            const modelsConfig = this.config.models;
+            const modelsConfig = this.modelsConfig;
 
             if(!modelsConfig || Object.keys(modelsConfig).length === 0) {
                 this.logger.warn('No models configured, skipping model initialization');

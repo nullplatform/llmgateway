@@ -17,12 +17,12 @@ import {PluginFactory} from "./factory";
 
 export class PluginManager {
     private plugins: Array<{name: string, plugin: IPlugin, config: IPluginConfig}> = [];
-    private config: GatewayConfig;
+    private config: GatewayConfig['plugins'];
     private pluginFactory: PluginFactory;
     private logger: Logger;
 
     constructor(
-        config: GatewayConfig,
+        config: GatewayConfig['plugins'],
         pluginFactory: PluginFactory,
         logger: Logger
     ) {
@@ -32,7 +32,7 @@ export class PluginManager {
     }
 
     async loadPlugins(): Promise<void> {
-        let pluginConfigs = this.config.plugins || [];
+        let pluginConfigs = this.config || [];
 
         pluginConfigs.sort((a,b) => a.priority - b.priority)
 
@@ -83,6 +83,7 @@ export class PluginManager {
                 try {
 
                     const result: IPluginResult = await plugin[pluginFunction](request);
+                    result.pluginName = config.name;
                     if(isDettachedRun) {
                         // If this is a detached run, we don't need to process the result further
                         continue;

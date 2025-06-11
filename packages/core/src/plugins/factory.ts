@@ -8,16 +8,16 @@ import path from "path";
 export class PluginFactory {
     private plugins: Map<string, new (...args: any[]) => IPlugin> = new Map();
     private logger: Logger;
-    private config: GatewayConfig;
+    private config:  GatewayConfig['availablePlugins'];
 
-    constructor(config: GatewayConfig, logger?: Logger) {
+    constructor(config: GatewayConfig['availablePlugins'], logger?: Logger) {
         this.logger = logger || new Logger();
         this.config = config;
     }
 
     async initializePlugins(): Promise<void> {
         await this.loadNativePlugins();
-        const availablePlugins = this.config.availablePlugins || [];
+        const availablePlugins = this.config || [];
 
         for (const plugin of availablePlugins) {
             let module: string;

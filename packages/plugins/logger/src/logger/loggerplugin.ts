@@ -12,8 +12,6 @@ export class LoggerPluginConfig {
 })
 export class LoggerPlugin implements IPlugin {
     async configure(config: LoggerPluginConfig): Promise<void> {
-        console.log('Configuring Logger Plugin with config');
-        console.log(config.pepe);
 
     }
 

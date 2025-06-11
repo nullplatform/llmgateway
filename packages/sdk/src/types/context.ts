@@ -26,6 +26,7 @@ export interface IHTTPResponse {
 
 export interface IRequestContext {
     // Core request/response data
+    project?: string; // Project identifier, if applicable
     request: ILLMRequest;
     response?: ILLMResponse; //If streaming, this will be undefined
     adapter?: string;

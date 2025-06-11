@@ -61,6 +61,7 @@ export interface IPlugin {
 // Plugin execution result
 export interface IPluginResult {
     success: boolean;
+    pluginName?: string; // Name of the plugin that produced this result
     status?: number; // HTTP status code for the response in case of error
     context?: IRequestContext;
     error?: Error;

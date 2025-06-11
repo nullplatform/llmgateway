@@ -12,16 +12,24 @@ import {ILLMResponse, INativeAdapter, IRequestContext, IToolCall} from '@nullpla
 import {ILLMApiAdapter} from "@nullplatform/llm-gateway-sdk";
 import {GatewayConfig} from "./config/gatewayConfig";
 import {PluginFactory} from "./plugins/factory";
+export interface ProjectRuntime {
+    name: string;
+    isDefault?: boolean;
+    description?: string;
+    models: GatewayConfig['models'];
+    pipelineManager: PluginManager;
+    llmApiAdapters: LLMApiAdapterRegistry;
+    modelRegistry: ModelRegistry;
+}
 export class GatewayServer {
     private app: express.Application;
-    private pipelineManager: PluginManager;
     private configLoader: ConfigLoader;
     private logger: Logger;
     private config: GatewayConfig;
-    private llmApiAdapters: LLMApiAdapterRegistry;
-    private providerRegistry: ProviderRegistry;
-    private modelRegistry: ModelRegistry;
     private pluginFactory: PluginFactory;
+    private projects: Record<string,ProjectRuntime> = {};
+    private providersRegistry: ProviderRegistry;
+
     constructor(config: string | GatewayConfig) {
         this.app = express();
         this.logger = new Logger();
@@ -84,34 +92,40 @@ export class GatewayServer {
 
     private async setupLLMRoutes(): Promise<void> {
         // OpenAI-compatible endpoint
-        for (const adapterName of this.llmApiAdapters.getAvailableAdapters()) {
-            const adapter = this.llmApiAdapters.get(adapterName);
-            for (const basePath of adapter.basePaths) {
-                this.app.post(`/${adapterName}${basePath}`, this.handleLLMRequest(adapter));
-            }
-            if (adapter.getNativeAdapters) {
-                const nativeAdapters: Array<INativeAdapter> = await adapter.getNativeAdapters();
-                for (const nativeAdapter of nativeAdapters) {
-                    this.app[nativeAdapter.method](`/${adapterName}${nativeAdapter.path}`, async (req, res) => {
-                        await nativeAdapter.doRequest({
-                            method: req.method,
-                            url: req.originalUrl,
-                            headers: req.headers as Record<string, string>,
-                            body: req.body
-                        }, res);
-                    });
+        for (const [projectName, project] of Object.entries(this.projects)) {
+            const projectPath = project.isDefault ? '' : `/${projectName}`;
+
+            for (const adapterName of project.llmApiAdapters.getAvailableAdapters()) {
+                const adapter = project.llmApiAdapters.get(adapterName);
+                for (const basePath of adapter.basePaths) {
+                    this.app.post(`${projectPath}/${adapterName}${basePath}`, this.handleLLMRequest(adapter, project));
+                }
+                if (adapter.getNativeAdapters) {
+                    const nativeAdapters: Array<INativeAdapter> = await adapter.getNativeAdapters();
+                    for (const nativeAdapter of nativeAdapters) {
+                        this.app[nativeAdapter.method](`${projectPath}/${adapterName}${nativeAdapter.path}`, async (req, res) => {
+                            await nativeAdapter.doRequest({
+                                method: req.method,
+                                url: req.originalUrl,
+                                headers: req.headers as Record<string, string>,
+                                body: req.body
+                            }, res);
+                        });
+                    }
                 }
             }
         }
+
     }
 
-     private handleLLMRequest(adapter: ILLMApiAdapter) {
+     private handleLLMRequest(adapter: ILLMApiAdapter, project: ProjectRuntime): express.RequestHandler {
         return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
             const startTime = new Date();
 
             try {
                 // Create request context
                 let context: IRequestContext = {
+                    project: project.name,
                     adapter: adapter.name,
                     httpRequest: {
                         method: req.method,
@@ -141,13 +155,14 @@ export class GatewayServer {
                 };
 
                 // Execute plugin plugins
-                const beforeModelExecution = await this.pipelineManager.beforeModel(context);
+                const beforeModelExecution = await project.pipelineManager.beforeModel(context);
                 if(beforeModelExecution.finalResult.success === false) {
+                    const error = beforeModelExecution.finalResult.error || new Error(`Plugin execution failed [${beforeModelExecution.finalResult.pluginName}]`);
+
                     // If the plugin execution failed, return the error response
                     res.status(beforeModelExecution.finalResult.status || 500).json({
-                        error: beforeModelExecution.finalResult.error || 'Plugin execution failed',
-                        request_id: context.request_id,
-                        message: beforeModelExecution.finalResult.error || 'An error occurred during plugin execution'
+                        error: "message" in error && error.message ? error.message : error,
+                        request_id: context.request_id
                     });
                     return;
                 }
@@ -158,7 +173,7 @@ export class GatewayServer {
                 // Determine a target model
                 const targetModel = beforeModelExecution.finalResult.context.target_model;
 
-                const model = this.modelRegistry.get(targetModel);
+                const model = project.modelRegistry.get(targetModel);
 
                 context.target_model = model.name;
                 context.target_model_provider = model.provider.name;
@@ -166,10 +181,10 @@ export class GatewayServer {
                     throw new Error(`Model '${targetModel}' not configured`);
                 }
                 if(context.request.stream) {
-                    await this.handleStreamingLLMRequest(context, model, adapter, targetModel, req, res);
+                    await this.handleStreamingLLMRequest(context, model, adapter, targetModel, req, res, project);
 
                 } else {
-                    await this.handleNonStreamingLLMRequest(context, model, adapter, targetModel, req, res);
+                    await this.handleNonStreamingLLMRequest(context, model, adapter, targetModel, req, res, project);
                 }
 
 
@@ -233,12 +248,10 @@ export class GatewayServer {
             }
         }
         // Merge usage
-        const mergedUsage = {
+        merged.usage  =  {
             ...merged.usage,
             ...chunk?.usage
         };
-
-        merged.usage  =  mergedUsage;
         return merged;
     }
 
@@ -249,6 +262,7 @@ export class GatewayServer {
         targetModel: string,
         req: express.Request,
         res: express.Response,
+        project: ProjectRuntime
     ): Promise<void> {
         let accumulatedResponse: ILLMResponse = undefined;
         let bufferedChunks: Array<ILLMResponse> = [];
@@ -285,7 +299,7 @@ export class GatewayServer {
                         };
                     }
 
-                    const afterModelExecution = await this.pipelineManager.afterChunk(internalContext);
+                    const afterModelExecution = await project.pipelineManager.afterChunk(internalContext);
                     if (afterModelExecution.finalResult.success === false) {
                         // If the plugin execution failed, return the error response
                         res.json({
@@ -318,7 +332,7 @@ export class GatewayServer {
                         internalContext.metrics.output_tokens = internalContext.accumulated_response.usage?.completion_tokens || 0;
                         internalContext.metrics.total_tokens = internalContext.metrics.input_tokens + internalContext.metrics.output_tokens;
                         //Do not wait is fully async operation
-                        this.pipelineManager.detachedAfterResponse(internalContext);
+                        project.pipelineManager.detachedAfterResponse(internalContext);
                         res.end();
                     }
 
@@ -337,6 +351,7 @@ export class GatewayServer {
         targetModel: string,
         req: express.Request,
         res: express.Response,
+        project: ProjectRuntime
     ): Promise<void> {
         const providerResponse = await model.provider.execute(context.request);
 
@@ -348,7 +363,7 @@ export class GatewayServer {
         context.metrics.output_tokens = providerResponse.usage?.completion_tokens || 0;
         context.metrics.total_tokens = context.metrics.input_tokens + context.metrics.output_tokens;
         // Execute post-processing plugins
-        const afterModelExecution = await this.pipelineManager.afterModel(context);
+        const afterModelExecution = await project.pipelineManager.afterModel(context);
         const finalContext = {
             ...context,
             ...afterModelExecution.finalResult.context,
@@ -358,7 +373,7 @@ export class GatewayServer {
         res.send(resp);
 
         //Do not wait is fully async operation
-        this.pipelineManager.detachedAfterResponse(finalContext);
+        project.pipelineManager.detachedAfterResponse(finalContext);
 
         // Log success
         this.logger.info('Request completed successfully', {
@@ -405,16 +420,48 @@ export class GatewayServer {
             await this.configLoader.load();
             this.config = this.configLoader.getConfig();
         }
-
-        this.providerRegistry = new ProviderRegistry(this.config, this.logger);
-        this.modelRegistry = new ModelRegistry(this.providerRegistry, this.config, this.logger);
-        await this.modelRegistry.initializeModels();
-        this.pluginFactory = new PluginFactory(this.config, this.logger);
+        this.pluginFactory = new PluginFactory(this.config.availablePlugins, this.logger);
         await this.pluginFactory.initializePlugins();
-        this.pipelineManager = new PluginManager(this.config, this.pluginFactory, this.logger);
-        await this.pipelineManager.loadPlugins();
-        this.llmApiAdapters = new LLMApiAdapterRegistry(this.logger);
-        await this.llmApiAdapters.initializeAdapters();
+        this.providersRegistry = new ProviderRegistry(this.config, this.logger)
+
+        if(this.config.defaultProject) {
+            const pipelineManager = new PluginManager(this.config.plugins, this.pluginFactory, this.logger);
+            await pipelineManager.loadPlugins();
+            const adapters = new LLMApiAdapterRegistry(this.logger);
+            await adapters.initializeAdapters();
+            const modelRegistry = new ModelRegistry(this.providersRegistry, this.config.models, this.logger);
+            await modelRegistry.initializeModels();
+            this.projects.default = {
+                isDefault: true,
+                name: 'default',
+                description: 'Default project for LLM Gateway',
+                models: this.config.models,
+                pipelineManager: pipelineManager,
+                llmApiAdapters: adapters,
+                modelRegistry: modelRegistry,
+            };
+            this.logger.info(`Default project initialized with ${Object.keys(this.config.models).length} models`);
+        }
+        for(const projectConfig of this.config.projects || []) {
+            const models = {...this.config.models, ...projectConfig.models};
+            const plugins = [...this.config.plugins,...projectConfig.plugins];
+            const pipelineManager = new PluginManager(plugins, this.pluginFactory, this.logger);
+            await pipelineManager.loadPlugins();
+            const adapters = new LLMApiAdapterRegistry(this.logger);
+            await adapters.initializeAdapters();
+            const modelRegistry = new ModelRegistry(this.providersRegistry, models, this.logger);
+            await modelRegistry.initializeModels();
+            this.projects[projectConfig.name] = {
+                name: projectConfig.name,
+                description: projectConfig.description,
+                isDefault: false,
+                models: projectConfig.models,
+                pipelineManager: pipelineManager,
+                llmApiAdapters: adapters,
+                modelRegistry: modelRegistry
+            };
+            this.logger.info(`Project '${projectConfig.name}' initialized with ${Object.keys(models).length} models`);
+        }
     }
 
     async start(port: number = 3000): Promise<void> {

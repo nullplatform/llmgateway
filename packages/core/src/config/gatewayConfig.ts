@@ -34,7 +34,7 @@ export interface GatewayConfig {
             origins: string[];
         };
     };
-
+    defaultProject?: boolean;
     availablePlugins: Array<{
         path?: string;
         module?: string;

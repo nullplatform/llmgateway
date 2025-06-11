@@ -9,8 +9,9 @@ server:
     origins: ["*"]
 
 availablePlugins:
+  - path: "../plugins/basic-apikey-auth/dist/index.js"
   - path: "../plugins/logger/dist/index.js"
-  - path: "../plugins/tracer/dist/index.js"
+  - path: "../plugins/clickhouse-tracer/dist/index.js"
   - path: "../plugins/regex-hider/dist/index.js"
 
 # Models are the main routing targets
@@ -51,6 +52,17 @@ models:
       category: "large-language-model"
       cost_tier: "high"
 
+projects:
+  - name: "colo"
+    description: "Default project for all users"
+    plugins:
+      - name: "basic-apikey-auth"
+        type: "basic-apikey-auth"
+        config:
+          apikeys:
+            - "test-key-123"
+
+
 plugins:
   - name: logger
     type: logger
@@ -68,8 +80,8 @@ plugins:
         - pattern: "\\b[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+\\b"  # Email address"
           replacement: "[REDACTED|PII]"
           applyTo: response
-  - name: tracer
-    type: tracer
+  - name: clickhouse-tracer
+    type: clickhouse-tracer
     priority: 100
     config:
       clickhouse:

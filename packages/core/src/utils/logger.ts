@@ -1,4 +1,4 @@
-// packages/core/src/utils/tracer.ts
+// packages/core/src/utils/clickhouse-tracer.ts
 
 import * as winston from 'winston';
 
@@ -64,7 +64,7 @@ export class Logger {
     }
 
 
-    // Create child tracer with additional context
+    // Create child clickhouse-tracer with additional context
     child(context: Record<string, any>): Logger {
         const childLogger = new Logger(this.level);
         childLogger.winston = this.winston.child(context);
@@ -81,7 +81,7 @@ export class Logger {
         };
     }
 
-    // HTTP request tracer
+    // HTTP request clickhouse-tracer
     logRequest(req: any, res: any, duration: number): void {
         this.info('HTTP Request', {
             method: req.method,
@@ -94,7 +94,7 @@ export class Logger {
         });
     }
 
-    // Plugin execution tracer
+    // Plugin execution clickhouse-tracer
     logPluginExecution(pluginName: string, phase: string, duration: number, success: boolean): void {
         const level = success ? 'debug' : 'warn';
         this[level]('Plugin execution', {
@@ -105,7 +105,7 @@ export class Logger {
         });
     }
 
-    // LLM provider request tracer
+    // LLM provider request clickhouse-tracer
     logProviderRequest(provider: string, model: string, tokens: any, duration: number): void {
         this.info('Provider request', {
             provider,

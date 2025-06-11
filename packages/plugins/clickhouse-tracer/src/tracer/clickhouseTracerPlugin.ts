@@ -25,6 +25,7 @@ export class ClickHouseConversationPluginConfig {
 }
 
 interface ConversationRecord {
+    project: string; // Project identifier, if applicable
     interaction_id: string;
     request_id: string;
     session_id?: string;
@@ -64,12 +65,12 @@ interface ConversationRecord {
 }
 
 @PluginMetadata({
-    name: 'tracer',
+    name: 'clickhouse-tracer',
     version: '1.0.0',
     description: 'Stores conversation data in ClickHouse with tool sequence buffering and detailed metrics',
     configurationSchema: ConfigSchema
 })
-export class TracerPlugin implements IPlugin {
+export class ClickhouseTracerPlugin implements IPlugin {
     private config!: ClickHouseConversationPluginConfig;
     private clickhouse!: ClickHouseClient;
     private pendingRecords: ConversationRecord[] = [];
@@ -130,6 +131,7 @@ export class TracerPlugin implements IPlugin {
     private async ensureTableExists(): Promise<void> {
         const createTableQuery = `
         CREATE TABLE IF NOT EXISTS ${this.config.tableName} (
+            project String,
             interaction_id String,
             request_id String,
             session_id Nullable(String),
@@ -168,7 +170,7 @@ export class TracerPlugin implements IPlugin {
             system_fingerprint Nullable(String),
             date Date MATERIALIZED toDate(timestamp)
         ) ENGINE = MergeTree()
-        PARTITION BY date
+        PARTITION BY (project, date)
         ORDER BY (interaction_id, timestamp)
         SETTINGS index_granularity = 8192
     `;
@@ -302,6 +304,7 @@ export class TracerPlugin implements IPlugin {
                 .flatMap(m => m.tool_calls || []);
 
             const record: ConversationRecord = {
+                project: context.project || 'default',
                 interaction_id: interactionId,
                 request_id: context.request_id,
                 session_id: context.session_id,

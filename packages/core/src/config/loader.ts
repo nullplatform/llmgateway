@@ -108,6 +108,33 @@ export class ConfigLoader {
     }
 
     private createValidationSchema(): Joi.ObjectSchema {
+        const modelsSchema = Joi.array().items(Joi.object({
+            name: Joi.string().required(),
+            isDefault: Joi.boolean().default(false),
+            description: Joi.string().optional(),
+            provider: Joi.object({
+                type: Joi.string().required(),
+                config: Joi.object().required()
+            }).required(),
+            modelConfig: Joi.object().optional(),
+            metadata: Joi.object().optional()
+        })).default([]);
+        const pluginsSchema = Joi.array().items(
+            Joi.object({
+                name: Joi.string().required(),
+                type: Joi.string().required(),
+                enabled: Joi.boolean().default(true),
+                priority: Joi.number().integer().min(0).max(1000).default(1000),
+                config: Joi.object().optional(),
+                conditions: Joi.object({
+                    paths: Joi.array().items(Joi.string()).optional(),
+                    methods: Joi.array().items(Joi.string().valid('GET', 'POST', 'PUT', 'DELETE', 'PATCH')).optional(),
+                    headers: Joi.object().optional(),
+                    user_ids: Joi.array().items(Joi.string()).optional(),
+                    models: Joi.array().items(Joi.string()).optional()
+                }).optional()
+            })
+        ).default([]);
         return Joi.object({
             server: Joi.object({
                 host: Joi.string().default('0.0.0.0'),
@@ -117,39 +144,25 @@ export class ConfigLoader {
                     origins: Joi.array().items(Joi.string()).default(['*'])
                 }).optional()
             }).required(),
-
-
-
-            models: Joi.array().items(
+            projects: Joi.array().items(
                 Joi.object({
                     name: Joi.string().required(),
-                    isDefault: Joi.boolean().default(false),
                     description: Joi.string().optional(),
-                    provider: Joi.object({
-                        type: Joi.string().required(),
-                        config: Joi.object().required()
-                    }).required(),
-                    modelConfig: Joi.object().optional(),
-                    metadata: Joi.object().optional()
-                })
-            ).required(),
-
-            plugins: Joi.array().items(
-                Joi.object({
-                    name: Joi.string().required(),
-                    type: Joi.string().required(),
-                    enabled: Joi.boolean().default(true),
-                    priority: Joi.number().integer().min(0).max(1000).default(1000),
-                    config: Joi.object().optional(),
-                    conditions: Joi.object({
-                        paths: Joi.array().items(Joi.string()).optional(),
-                        methods: Joi.array().items(Joi.string().valid('GET', 'POST', 'PUT', 'DELETE', 'PATCH')).optional(),
-                        headers: Joi.object().optional(),
-                        user_ids: Joi.array().items(Joi.string()).optional(),
-                        models: Joi.array().items(Joi.string()).optional()
-                    }).optional()
+                    models: modelsSchema,
+                    plugins: pluginsSchema
                 })
             ).default([]),
+            availablePlugins: Joi.array().items(
+                Joi.object({
+                    path: Joi.string().optional(),
+                    module: Joi.string().optional()
+                })),
+            defaultProject: Joi.boolean().default(true),
+
+
+            models: modelsSchema,
+
+            plugins: pluginsSchema,
 
             routing: Joi.object({
                 strategy: Joi.string().valid('round_robin', 'least_latency', 'weighted').default('round_robin'),
