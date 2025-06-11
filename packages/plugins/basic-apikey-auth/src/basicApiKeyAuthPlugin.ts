@@ -43,7 +43,7 @@ export class BasicApiKeyAuthPlugin implements IPlugin {
 
 
     async beforeModel(llmRequest: IRequestContext): Promise<IPluginResult> {
-        let apiKey = llmRequest.httpRequest.headers['authorization'] || '';
+        let apiKey = llmRequest.httpRequest.headers['authorization'] || llmRequest.httpRequest.headers['x-api-key'] || '';
         apiKey = apiKey.replace(/^Bearer\s+/i, '');
         if(this.config.apikeys.indexOf(apiKey) === -1) {
             return {

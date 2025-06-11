@@ -9,6 +9,7 @@ server:
     origins: ["*"]
 
 availablePlugins:
+  - path: "../plugins/model-router/dist/index.js"
   - path: "../plugins/basic-apikey-auth/dist/index.js"
   - path: "../plugins/logger/dist/index.js"
   - path: "../plugins/clickhouse-tracer/dist/index.js"
@@ -51,18 +52,53 @@ models:
     metadata:
       category: "large-language-model"
       cost_tier: "high"
+  - name: gpt2
+    isDefault: false
+    description: "Bad model"
+    provider:
+      type: "openai"
+      config:
+        apiKey: "test"
+        baseUrl: "http://127.0.0.1:8086"
+        retryAttempts: 1
+        model: gpt-4.1-mini
+
+  - name: claude
+    isDefault: false
+    description: "Anthropic Claude models"
+    provider:
+      type: "anthropic"
+      config:
+        apiKey: "${ANTHROPIC_API_KEY}"
+        timeout: 30000
+        retryAttempts: 3
+        model: claude-sonnet-4-20250514
+    modelConfig:
+      maxTokens: 4096
+      temperature: 0.7
+    metadata:
+      category: "large-language-model"
+      cost_tier: "high"
 
 projects:
   - name: "colo"
-    description: "Default project for all users"
+    description: "project example"
     plugins:
-      - name: "basic-apikey-auth"
-        type: "basic-apikey-auth"
+      - name: "router"
+        type: "model-router"
         config:
-          apikeys:
-            - "test-key-123"
+          model: "gpt2"
+          fallbacks:
+            - "claude"
+            - "gpt"
+            - "claude"
+#      - name: "basic-apikey-auth"
+#        type: "basic-apikey-auth"
+#        config:
+#          apikeys:
+#            - "test-key-123"
 
-
+# Default plugins for all projects
 plugins:
   - name: logger
     type: logger

@@ -7,7 +7,7 @@ import {
     ILLMRequest,
     ILLMResponse,
     IUsage,
-    IMessage, IContent, IChunkEmitter
+    IMessage, IContent, IChunkEmitter, IPluginPhaseExecution, LLMModelError
 } from '@nullplatform/llm-gateway-sdk';
 import { Logger } from '../utils/logger.js';
 
@@ -153,7 +153,8 @@ export class AnthropicProvider implements IProvider {
                 error,
                 request: this.sanitizeRequest(request)
             });
-            throw error;
+            throw new LLMModelError(error);
+
         }
     }
 
@@ -298,9 +299,9 @@ export class AnthropicProvider implements IProvider {
         }
     }
 
-    async executeStreaming(request: ILLMRequest, chunkEmitter: IChunkEmitter): Promise<void> {
+    async executeStreaming(request: ILLMRequest, chunkEmitter: IChunkEmitter): Promise<IPluginPhaseExecution | void> {
         const endpoint = '/v1/messages';
-
+        let lastPluginExecution: IPluginPhaseExecution;
         try {
             const anthropicRequest = this.transformToAnthropicRequest(request);
             // Enable streaming for Anthropic
@@ -331,7 +332,7 @@ export class AnthropicProvider implements IProvider {
                         continue; // Skip to next line
                     }
 
-                    await this.processAnthropicStreamLine(
+                    lastPluginExecution = await this.processAnthropicStreamLine(
                         trimmedLine,
                         lastParsedEvent,
                         chunkEmitter
@@ -358,9 +359,9 @@ export class AnthropicProvider implements IProvider {
             });
 
             // Wait for stream to complete
-            await new Promise<void>((resolve, reject) => {
-                response.data.on('end', resolve);
-                response.data.on('error', reject);
+            await new Promise<IPluginPhaseExecution | void>((resolve, reject) => {
+                response.data.on('end', () => { resolve(lastPluginExecution)});
+                response.data.on('error',() => { reject(lastPluginExecution)});
             });
 
         } catch (error) {
@@ -368,7 +369,7 @@ export class AnthropicProvider implements IProvider {
                 error,
                 request: this.sanitizeRequest(request)
             });
-            throw error;
+            throw new LLMModelError(error);
         }
     }
 
@@ -377,7 +378,7 @@ export class AnthropicProvider implements IProvider {
         eventType: string | null,
         chunkEmitter: IChunkEmitter,
         lastChunk: boolean = false
-    ): Promise<void> {
+    ): Promise<IPluginPhaseExecution | undefined> {
         if (!line.startsWith('data: ')) {
             return;
         }
@@ -445,7 +446,7 @@ export class AnthropicProvider implements IProvider {
                     break;
 
                 case 'message_stop':
-                    await chunkEmitter.onData(undefined, true); // Emit final chunk
+                    return await chunkEmitter.onData(undefined, true); // Emit final chunk
 
                 default:
                     // Log unknown event types for debugging
@@ -459,6 +460,7 @@ export class AnthropicProvider implements IProvider {
                 data,
                 error: error instanceof Error ? error.message : error
             });
+
             // Continue processing instead of throwing - streaming should be resilient
         }
     }

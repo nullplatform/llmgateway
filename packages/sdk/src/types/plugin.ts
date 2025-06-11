@@ -47,6 +47,8 @@ export interface IPlugin {
 
     beforeModel?(llmRequest: IRequestContext): Promise<IPluginResult>;
 
+    onModelError?(llmRequest: IRequestContext): Promise<IPluginResult>;
+
     afterModel?(llmRequest: IRequestContext): Promise<IPluginResult>;
 
     afterChunk?(llmRequest: IRequestContext): Promise<IPluginResult>;

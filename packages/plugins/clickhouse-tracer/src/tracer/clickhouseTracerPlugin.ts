@@ -37,6 +37,7 @@ interface ConversationRecord {
     request_model: string;
     target_model: string;
     target_model_provider: string;
+    response_model?: string; // Model used for the response, if applicable
     messages: any;
     response_content: any;
     is_tool_callback?: boolean;
@@ -58,6 +59,7 @@ interface ConversationRecord {
     user_agent?: string;
     headers: any;
     metadata: any;
+    request_tools: any;
     error_message?: string;
     retry_count?: number;
     finish_reason?: string;
@@ -143,8 +145,10 @@ export class ClickhouseTracerPlugin implements IPlugin {
             request_model Nullable(String),
             target_model Nullable(String),
             target_model_provider Nullable(String),
+            response_model Nullable(String),
             messages Array(JSON) DEFAULT [],
             response_content Array(JSON) DEFAULT [],
+            request_tools Array(JSON) DEFAULT [],
             is_tool_callback Boolean,
             is_tool_usage Boolean,
             tool_calls Array(JSON) DEFAULT [],
@@ -316,6 +320,7 @@ export class ClickhouseTracerPlugin implements IPlugin {
                 request_model: context.request.model,
                 target_model: context.target_model,
                 target_model_provider: context.target_model_provider,
+                response_model: context.response?.model,
                 messages: context.request.messages,
                 response_content: context.response?.content,
                 is_tool_callback: this.requestWasTollCallback(context.request) ? true : false,
@@ -339,6 +344,7 @@ export class ClickhouseTracerPlugin implements IPlugin {
                 user_agent: context.user_agent,
                 headers: context.headers,
                 metadata: context.metadata,
+                request_tools: context.request.tools || [],
                 error_message: context.error?.message,
                 retry_count: context.retry_count,
                 finish_reason: this.getFinishReason(context.response),

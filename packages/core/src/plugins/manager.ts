@@ -83,18 +83,20 @@ export class PluginManager {
                 try {
 
                     const result: IPluginResult = await plugin[pluginFunction](request);
-                    result.pluginName = config.name;
+                    if(result) {
+                        result.pluginName = config?.name;
+                    }
                     if(isDettachedRun) {
                         // If this is a detached run, we don't need to process the result further
                         continue;
                     }
                     //Update context because plugin can return a modified context or null
                     result.context = {
-                        ...llmRequest,
+                        ...request,
                         ...(result?.context ? result.context : {}),
                     }
                     result.context.metadata = {
-                        ...llmRequest.metadata,
+                        ...request.metadata,
                         ...(result?.context?.metadata ? result.context.metadata : {}),
                     }
 
@@ -138,6 +140,10 @@ export class PluginManager {
 
     async afterChunk(llmRequest: IRequestContext) : Promise<IPluginPhaseExecution> {
         return await this.executePluginFunction(llmRequest, 'afterChunk', true) as IPluginPhaseExecution;
+    }
+
+    async onModelError(llmRequest: IRequestContext) : Promise<IPluginPhaseExecution> {
+        return await this.executePluginFunction(llmRequest, 'onModelError', false) as IPluginPhaseExecution;
     }
 
     async detachedAfterResponse(llmRequest: IRequestContext) : Promise<void> {

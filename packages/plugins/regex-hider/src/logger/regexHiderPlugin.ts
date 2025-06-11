@@ -178,7 +178,7 @@ export class RegexHiderPlugin implements IPlugin {
                         }
                         return {
                             ...content,
-                            [messageKey]: { ...content.message, content: processedText }
+                            [messageKey]: { ...content[messageKey], ...content[messageKey], content: processedText }
                         };
                     }
                     return content;

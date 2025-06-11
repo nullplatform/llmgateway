@@ -8,7 +8,13 @@ import { Logger } from './utils/logger.js';
 import { LLMApiAdapterRegistry } from './adapters/registry.js';
 import { ModelRegistry } from './models/modelRegistry.js';
 import { ProviderRegistry } from './providers/providerRegistry.js';
-import {ILLMResponse, INativeAdapter, IRequestContext, IToolCall} from '@nullplatform/llm-gateway-sdk';
+import {
+    ILLMResponse, IModel,
+    INativeAdapter,
+    IPluginPhaseExecution,
+    IRequestContext,
+    IToolCall, LLMModelError
+} from '@nullplatform/llm-gateway-sdk';
 import {ILLMApiAdapter} from "@nullplatform/llm-gateway-sdk";
 import {GatewayConfig} from "./config/gatewayConfig";
 import {PluginFactory} from "./plugins/factory";
@@ -28,6 +34,7 @@ export class GatewayServer {
     private config: GatewayConfig;
     private pluginFactory: PluginFactory;
     private projects: Record<string,ProjectRuntime> = {};
+    private maxRetries;
     private providersRegistry: ProviderRegistry;
 
     constructor(config: string | GatewayConfig) {
@@ -120,9 +127,11 @@ export class GatewayServer {
 
      private handleLLMRequest(adapter: ILLMApiAdapter, project: ProjectRuntime): express.RequestHandler {
         return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+            let retry_count = 0;
             const startTime = new Date();
-
-            try {
+            let reevaluateRequest = true;
+            while(reevaluateRequest && retry_count < this.maxRetries) {
+                reevaluateRequest = false;
                 // Create request context
                 let context: IRequestContext = {
                     project: project.name,
@@ -133,6 +142,7 @@ export class GatewayServer {
                         headers: req.headers as Record<string, string>,
                         body: req.body
                     },
+                    available_models: project.modelRegistry.getAvailableModels(),
                     request_id: req.id!,
                     request: req.body, // Will be transformed by input adapter
                     plugin_data: new Map(),
@@ -144,52 +154,78 @@ export class GatewayServer {
                     client_ip: req.ip,
                     user_agent: req.headers['user-agent'],
                     metadata: {},
+                    retry_count: retry_count++,
                 };
+                try {
 
 
-                // Transform input to standard format
-                context.request = await adapter.transformInput(req.body);
-                context.request.metadata = {
-                    ...context.request.metadata,
-                    original_provider: adapter.name
-                };
 
-                // Execute plugin plugins
-                const beforeModelExecution = await project.pipelineManager.beforeModel(context);
-                if(beforeModelExecution.finalResult.success === false) {
-                    const error = beforeModelExecution.finalResult.error || new Error(`Plugin execution failed [${beforeModelExecution.finalResult.pluginName}]`);
 
-                    // If the plugin execution failed, return the error response
-                    res.status(beforeModelExecution.finalResult.status || 500).json({
-                        error: "message" in error && error.message ? error.message : error,
-                        request_id: context.request_id
-                    });
-                    return;
+                    // Transform input to standard format
+                    context.request = await adapter.transformInput(req.body);
+                    context.request.metadata = {
+                        ...context.request.metadata,
+                        original_provider: adapter.name
+                    };
+
+                    // Execute plugin plugins
+                    const beforeModelExecution = await project.pipelineManager.beforeModel(context);
+                    if (beforeModelExecution.finalResult.success === false) {
+                        const error = beforeModelExecution.finalResult.error || new Error(`Plugin execution failed [${beforeModelExecution.finalResult.pluginName}]`);
+
+                        // If the plugin execution failed, return the error response
+                        res.status(beforeModelExecution.finalResult.status || 500).json({
+                            error: "message" in error && error.message ? error.message : error,
+                            request_id: context.request_id
+                        });
+                        return;
+                    }
+                    if( beforeModelExecution.finalResult.reevaluateRequest) {
+                        reevaluateRequest = true;
+                        continue;
+                    }
+                    context = {
+                        ...context,
+                        ...beforeModelExecution.finalResult.context,
+                    }
+                    // Determine a target model
+                    const targetModel = beforeModelExecution.finalResult.context.target_model;
+
+                    const model = project.modelRegistry.get(targetModel);
+
+                    context.target_model = model.name;
+                    context.target_model_provider = model.provider.name;
+                    if (!model) {
+                        throw new Error(`Model '${targetModel}' not configured`);
+                    }
+
+                    let pluginResultPost: void | IPluginPhaseExecution = undefined;
+                    if (context.request.stream) {
+                        pluginResultPost = await this.handleStreamingLLMRequest(context, model, adapter, targetModel, req, res, project);
+
+                    } else {
+                        pluginResultPost = await this.handleNonStreamingLLMRequest(context, model, adapter, targetModel, req, res, project);
+                    }
+
+                    if( pluginResultPost && pluginResultPost.finalResult.reevaluateRequest) {
+                        // If the plugin execution returned reevaluateRequest, we need to re-evaluate the request
+                        reevaluateRequest = true;
+                        continue;
+                    }
+
+                } catch (error) {
+                    if( error instanceof LLMModelError || error.name === 'LLMModelError') {
+                        context.error = error;
+                        const onModelError = await project.pipelineManager.onModelError(context);
+                        if( onModelError && onModelError.finalResult.reevaluateRequest) {
+                            // If the plugin execution returned reevaluateRequest, we need to re-evaluate the request
+                            reevaluateRequest = true;
+                            continue;
+                        }
+
+                    }
+                    next(error);
                 }
-                context = {
-                    ...context,
-                    ...beforeModelExecution.finalResult.context,
-                }
-                // Determine a target model
-                const targetModel = beforeModelExecution.finalResult.context.target_model;
-
-                const model = project.modelRegistry.get(targetModel);
-
-                context.target_model = model.name;
-                context.target_model_provider = model.provider.name;
-                if (!model) {
-                    throw new Error(`Model '${targetModel}' not configured`);
-                }
-                if(context.request.stream) {
-                    await this.handleStreamingLLMRequest(context, model, adapter, targetModel, req, res, project);
-
-                } else {
-                    await this.handleNonStreamingLLMRequest(context, model, adapter, targetModel, req, res, project);
-                }
-
-
-            } catch (error) {
-                next(error);
             }
         };
     }
@@ -257,19 +293,19 @@ export class GatewayServer {
 
     private async handleStreamingLLMRequest(
         context: IRequestContext,
-        model: any,
+        model: IModel,
         adapter: ILLMApiAdapter,
         targetModel: string,
         req: express.Request,
         res: express.Response,
         project: ProjectRuntime
-    ): Promise<void> {
+    ): Promise<IPluginPhaseExecution | void> {
         let accumulatedResponse: ILLMResponse = undefined;
         let bufferedChunks: Array<ILLMResponse> = [];
         let bufferedChunk: ILLMResponse | undefined = undefined;
-        const startTimeMs = Date.now();
-        await model.provider.executeStreaming(context.request, {
-            onData: async (chunk: ILLMResponse, finalChunk: boolean) => {
+        let firstChunkEmitted = false;
+        return await model.provider.executeStreaming(context.request, {
+            onData: async (chunk: ILLMResponse, finalChunk: boolean): Promise<IPluginPhaseExecution | undefined> => {
                 try {
                     const internalContext: IRequestContext = {
                         ...context,
@@ -300,6 +336,15 @@ export class GatewayServer {
                     }
 
                     const afterModelExecution = await project.pipelineManager.afterChunk(internalContext);
+
+                    if(afterModelExecution.finalResult.reevaluateRequest) {
+                        //After first chunk is emitted, reevaluate the request is not allowed
+                        if(firstChunkEmitted) {
+                            throw new Error('Reevaluating request after first chunk is not allowed in streaming mode');
+                        } else {
+                            return afterModelExecution;
+                        }
+                    }
                     if (afterModelExecution.finalResult.success === false) {
                         // If the plugin execution failed, return the error response
                         res.json({
@@ -308,7 +353,7 @@ export class GatewayServer {
                             message: afterModelExecution.finalResult.error || 'An error occurred during plugin execution'
                         });
                         res.end();
-                        return;
+                        return afterModelExecution;
 
                     } else {
                         bufferedChunk = afterModelExecution.finalResult.context.bufferedChunk || bufferedChunk;
@@ -316,6 +361,7 @@ export class GatewayServer {
                         const shouldEmmit = afterModelExecution.finalResult.emitChunk !== undefined ? afterModelExecution.finalResult.emitChunk : true;
 
                         if (shouldEmmit) {
+                            firstChunkEmitted = true;
                             accumulatedResponse = this.mergeChunks(accumulatedResponse, bufferedChunk, false);
 
                             const resp = await adapter.transformOutputChunk(internalContext.request, req.body, bufferedChunk, finalChunk, accumulatedResponse);
@@ -334,10 +380,13 @@ export class GatewayServer {
                         //Do not wait is fully async operation
                         project.pipelineManager.detachedAfterResponse(internalContext);
                         res.end();
+                        return afterModelExecution;
                     }
 
                 }catch(error) {
-                    console.error('Error processing streaming chunk', error);
+                    this.logger.error('Error processing streaming chunk', error);
+                    throw error;
+
                 }
             }
         });
@@ -352,7 +401,7 @@ export class GatewayServer {
         req: express.Request,
         res: express.Response,
         project: ProjectRuntime
-    ): Promise<void> {
+    ): Promise<IPluginPhaseExecution | undefined> {
         const providerResponse = await model.provider.execute(context.request);
 
         // Update context with response
@@ -367,6 +416,9 @@ export class GatewayServer {
         const finalContext = {
             ...context,
             ...afterModelExecution.finalResult.context,
+        }
+        if(afterModelExecution.finalResult.reevaluateRequest) {
+            return afterModelExecution;
         }
         const resp = await adapter.transformOutput(finalContext.request, req.body, finalContext.response)
         // Send response
@@ -420,6 +472,7 @@ export class GatewayServer {
             await this.configLoader.load();
             this.config = this.configLoader.getConfig();
         }
+        this.maxRetries = Math.max(this.config.maxRetries || 3, 1);
         this.pluginFactory = new PluginFactory(this.config.availablePlugins, this.logger);
         await this.pluginFactory.initializePlugins();
         this.providersRegistry = new ProviderRegistry(this.config, this.logger)

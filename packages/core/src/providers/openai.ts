@@ -1,7 +1,14 @@
 // packages/core/src/providers/openai.ts
 
 import axios, {AxiosError, AxiosInstance, AxiosRequestConfig} from 'axios';
-import {IProvider, IProviderFactory, ILLMRequest, ILLMResponse, IChunkEmitter} from '@nullplatform/llm-gateway-sdk';
+import {
+    IProvider,
+    IProviderFactory,
+    ILLMRequest,
+    ILLMResponse,
+    IChunkEmitter,
+    IPluginPhaseExecution, LLMModelError
+} from '@nullplatform/llm-gateway-sdk';
 import {Logger} from '../utils/logger.js';
 import {OpenAIRequest} from "../adapters/openai";
 
@@ -83,11 +90,11 @@ export class OpenAIProvider implements IProvider {
         );
     }
 
-    async executeStreaming(request: ILLMRequest, chunkEmitter: IChunkEmitter): Promise<void> {
+    async executeStreaming(request: ILLMRequest, chunkEmitter: IChunkEmitter): Promise<IPluginPhaseExecution | void> {
         const httpRequest = this.buildOpenAIRequest(request);
         httpRequest.stream_options = { include_usage: true };
         const endpoint = '/chat/completions';
-
+        let lastPluginExecution: IPluginPhaseExecution | void = null;
         try {
             const response = await this.client.post(endpoint, httpRequest, {
                 responseType: 'stream'
@@ -105,7 +112,7 @@ export class OpenAIProvider implements IProvider {
 
                 for (const line of lines) {
                     if (line.trim()) {
-                        await this.processStreamLine(line.trim(), chunkEmitter, lastChunk);
+                        lastPluginExecution = await this.processStreamLine(line.trim(), chunkEmitter, lastChunk);
                     }
                 }
             });
@@ -113,7 +120,7 @@ export class OpenAIProvider implements IProvider {
             response.data.on('end', async () => {
                 // Process any remaining data in buffer
                 if (buffer.trim()) {
-                    await this.processStreamLine(buffer.trim(), chunkEmitter, lastChunk);
+                   lastPluginExecution = await this.processStreamLine(buffer.trim(), chunkEmitter, lastChunk);
                 }
             });
 
@@ -123,18 +130,18 @@ export class OpenAIProvider implements IProvider {
             });
 
             // Wait for stream to complete
-            await new Promise<void>((resolve, reject) => {
-                response.data.on('end', resolve);
-                response.data.on('error', reject);
+            await new Promise<IPluginPhaseExecution | void>((resolve, reject) => {
+                response.data.on('end', () => { resolve(lastPluginExecution)});
+                response.data.on('error',() => {reject(lastPluginExecution) });
             });
 
         } catch (error) {
             this.logger.error('Streaming request failed', { error });
-            throw error;
+            throw new LLMModelError(error);;
         }
     }
 
-    private async processStreamLine(line: string, chunkEmitter: IChunkEmitter, lastChunk: any): Promise<void> {
+    private async processStreamLine(line: string, chunkEmitter: IChunkEmitter, lastChunk: any): Promise<IPluginPhaseExecution | void> {
         if (!line.startsWith('data: ')) {
             return;
         }
@@ -149,7 +156,7 @@ export class OpenAIProvider implements IProvider {
         try {
             const parsedChunk = JSON.parse(data);
             lastChunk = parsedChunk;
-            await this.emitStreamChunk(chunkEmitter, parsedChunk);
+            return await this.emitStreamChunk(chunkEmitter, parsedChunk);
         } catch (error) {
             this.logger.error('Failed to parse OpenAI stream chunk', {
                 data,
@@ -159,7 +166,7 @@ export class OpenAIProvider implements IProvider {
         }
     }
 
-    private async emitStreamChunk(chunkEmitter: IChunkEmitter, parsedChunk: any): Promise<void> {
+    private async emitStreamChunk(chunkEmitter: IChunkEmitter, parsedChunk: any): Promise<IPluginPhaseExecution | void> {
         const choice = parsedChunk.choices?.[0];
 
         const response: ILLMResponse = {
@@ -177,10 +184,10 @@ export class OpenAIProvider implements IProvider {
             usage: parsedChunk.usage
         };
 
-        await chunkEmitter.onData(response, false);
+        return await chunkEmitter.onData(response, false);
     }
 
-    private async emitFinalChunk(chunkEmitter: IChunkEmitter, lastChunk: any): Promise<void> {
+    private async emitFinalChunk(chunkEmitter: IChunkEmitter, lastChunk: any): Promise<IPluginPhaseExecution | void> {
 
         let finalResponse: ILLMResponse = null;
 
@@ -201,7 +208,7 @@ export class OpenAIProvider implements IProvider {
             };
         }
 
-        await chunkEmitter.onData(finalResponse, true);
+        return await chunkEmitter.onData(finalResponse, true);
     }
 
     buildOpenAIRequest(request: ILLMRequest): OpenAIRequest {
@@ -252,7 +259,7 @@ export class OpenAIProvider implements IProvider {
             } as ILLMResponse;
         } catch (error) {
             this.logger.error('OpenAI request failed', { error, request: this.sanitizeRequest(request) });
-            throw error;
+            throw new LLMModelError(error);
         }
     }
 

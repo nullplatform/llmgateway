@@ -3,9 +3,21 @@
 import { ILLMRequest, ILLMResponse } from './request.js';
 import {IHTTPRequest, IHTTPResponse} from "./context.js";
 import {OpenAIRequest} from "@nullplatform/llm-gateway-core/dist/adapters/openai";
+import {IPluginPhaseExecution} from "@llm-gateway/sdk";
 
 export interface IChunkEmitter {
-    onData(chunk: ILLMResponse, finalChunk: boolean): Promise<void>;
+    onData(chunk: ILLMResponse, finalChunk: boolean): Promise<IPluginPhaseExecution | undefined>;
+}
+
+export class LLMModelError extends Error {
+    constructor(error: Error) {
+        super(error.message);
+        this.name = 'LLMModelError';
+
+        if (Error.captureStackTrace) {
+            Error.captureStackTrace(this, LLMModelError);
+        }
+    }
 }
 
 export interface IProvider<ConfigType = any> {
@@ -13,7 +25,7 @@ export interface IProvider<ConfigType = any> {
     readonly config: ConfigType;
 
     execute(request: ILLMRequest): Promise<ILLMResponse>;
-    executeStreaming(request: ILLMRequest, chunkEmitter: IChunkEmitter): Promise<void>;
+    executeStreaming(request: ILLMRequest, chunkEmitter: IChunkEmitter): Promise<IPluginPhaseExecution | void>;
 
 }
 

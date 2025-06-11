@@ -34,6 +34,7 @@ export interface GatewayConfig {
             origins: string[];
         };
     };
+    maxRetries?: number;
     defaultProject?: boolean;
     availablePlugins: Array<{
         path?: string;
