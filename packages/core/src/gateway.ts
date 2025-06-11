@@ -107,11 +107,12 @@ export class GatewayServer {
 
      private handleLLMRequest(adapter: ILLMApiAdapter) {
         return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-            const startTime = Date.now();
+            const startTime = new Date();
 
             try {
                 // Create request context
                 let context: IRequestContext = {
+                    adapter: adapter.name,
                     httpRequest: {
                         method: req.method,
                         url: req.originalUrl,
@@ -159,14 +160,16 @@ export class GatewayServer {
 
                 const model = this.modelRegistry.get(targetModel);
 
+                context.target_model = model.name;
+                context.target_model_provider = model.provider.name;
                 if (!model) {
                     throw new Error(`Model '${targetModel}' not configured`);
                 }
                 if(context.request.stream) {
-                    await this.handleStreamingLLMRequest(context, model, adapter, targetModel, req, res, startTime);
+                    await this.handleStreamingLLMRequest(context, model, adapter, targetModel, req, res);
 
                 } else {
-                    await this.handleNonStreamingLLMRequest(context, model, adapter, targetModel, req, res, startTime);
+                    await this.handleNonStreamingLLMRequest(context, model, adapter, targetModel, req, res);
                 }
 
 
@@ -176,7 +179,68 @@ export class GatewayServer {
         };
     }
 
-    
+    private mergeChunks(
+        accumulatedResponse: Partial<ILLMResponse> = {},
+        chunk: Partial<ILLMResponse> = {},
+        messageContentDelta: boolean = true
+    ): ILLMResponse {
+        const messageContentKey = messageContentDelta ? 'delta' : 'message';
+        const merged: ILLMResponse = {
+            id: chunk?.id || accumulatedResponse?.id,
+            object: chunk?.object || accumulatedResponse.object,
+            created: chunk?.created || accumulatedResponse.created,
+            model: chunk?.model || accumulatedResponse?.model,
+            content: [],
+            usage: {
+                prompt_tokens: 0,
+                completion_tokens: 0,
+                total_tokens: 0
+            },
+            system_fingerprint: chunk?.system_fingerprint || accumulatedResponse?.system_fingerprint,
+            ...structuredClone(accumulatedResponse)
+        }
+
+        const lastContentIndex = Math.max(merged.content?.length -1 || 0,0);
+        const chunkIndex = Math.max(merged?.content?.length -1 || 0, 0);
+        if(!merged.content[lastContentIndex]) {
+            merged.content[lastContentIndex] = {
+                index: lastContentIndex,
+                [messageContentKey]: {}
+            };
+        }
+        merged.content[lastContentIndex][messageContentKey].content = `${merged?.content?.[chunkIndex]?.[messageContentKey]?.content || ''}${chunk?.content?.[chunkIndex]?.delta?.content || chunk?.content?.[chunkIndex]?.message?.content || ''}`;
+        merged.content[lastContentIndex].finish_reason = merged.content[lastContentIndex].finish_reason || chunk?.content?.[chunkIndex]?.finish_reason;
+        if(chunk?.content?.[chunkIndex]?.delta?.tool_calls || chunk?.content?.[chunkIndex]?.message?.tool_calls) {
+            if(!merged?.content[lastContentIndex]?.[messageContentKey]?.tool_calls) {
+                merged.content[lastContentIndex][messageContentKey].tool_calls = [];
+            }
+            const toolCalls = chunk?.content?.[chunkIndex]?.delta?.tool_calls || chunk?.content?.[chunkIndex]?.message?.tool_calls || [];
+            for (const toolCall of toolCalls) {
+                if(toolCall.id) {
+                    merged.content?.[0][messageContentKey].tool_calls.push(toolCall)
+                } else {
+                    const existingCalls = merged.content?.[lastContentIndex][messageContentKey].tool_calls;
+                    const existingTool= existingCalls?.[existingCalls.length - 1];
+                    if(existingTool && existingTool.function) {
+                        // If the tool call is a continuation of the last one, append to it
+                        existingTool.function.arguments = (existingTool.function.arguments || '') + (toolCall.function?.arguments || '');
+                    } else {
+                        // Otherwise, add a new tool call
+                        merged.content[lastContentIndex][messageContentKey].tool_calls.push(toolCall);
+                    }
+                }
+
+            }
+        }
+        // Merge usage
+        const mergedUsage = {
+            ...merged.usage,
+            ...chunk?.usage
+        };
+
+        merged.usage  =  mergedUsage;
+        return merged;
+    }
 
     private async handleStreamingLLMRequest(
         context: IRequestContext,
@@ -185,96 +249,82 @@ export class GatewayServer {
         targetModel: string,
         req: express.Request,
         res: express.Response,
-        startTime: number
     ): Promise<void> {
         let accumulatedResponse: ILLMResponse = undefined;
+        let bufferedChunks: Array<ILLMResponse> = [];
+        let bufferedChunk: ILLMResponse | undefined = undefined;
         const startTimeMs = Date.now();
         await model.provider.executeStreaming(context.request, {
-            onData: async (chunk: ILLMResponse, finalChunk: boolean)=> {
-                const internalContext: IRequestContext = {
-                    ...context,
-                };
-                internalContext.response = undefined;
-                internalContext.chunk = chunk;
-                internalContext.finalChunk = finalChunk;
-                internalContext.accumulated_response = accumulatedResponse;
-
-                if(accumulatedResponse === undefined) {
-                    res.status(200);
-                    res.setHeader('Transfer-Encoding', 'chunked');
-                    // @ts-ignore
-                    accumulatedResponse = {
-                        id: chunk?.id,
-                        object: chunk?.object,
-                        created: chunk?.created,
-                        model: chunk?.model,
-                        usage: chunk?.usage,
-                        content: [{
-                            index: 0,
-                            message: chunk?.content[0]?.message || chunk?.content[0]?.delta || {}
-                        }]
+            onData: async (chunk: ILLMResponse, finalChunk: boolean) => {
+                try {
+                    const internalContext: IRequestContext = {
+                        ...context,
                     };
-                } else {
-                    // @ts-ignore
-                    accumulatedResponse.content[0].message.content = `${accumulatedResponse?.content?.[0]?.message?.content || ''}${chunk?.content?.[0]?.message?.content || chunk?.content?.[0]?.delta?.content || ''}`;
-                    accumulatedResponse.content[0].finish_reason = chunk?.content?.[0]?.finish_reason;
-                    if(chunk?.content?.[0]?.delta?.tool_calls || chunk?.content?.[0]?.message?.tool_calls) {
-                        if(!accumulatedResponse?.content[0]?.message?.tool_calls) {
-                            accumulatedResponse.content[0].message.tool_calls = [];
-                        }
-                        const toolCalls = chunk?.content?.[0]?.delta?.tool_calls || chunk?.content?.[0]?.message?.tool_calls || [];
-                        for (const toolCall of toolCalls) {
-                            if(toolCall.id) {
-                                accumulatedResponse.content?.[0].message.tool_calls.push(toolCall)
-                            } else {
-                                const existingCalls = accumulatedResponse.content?.[0].message.tool_calls;
-                                const existingTool= existingCalls?.[existingCalls.length - 1];
-                                if(existingTool && existingTool.function) {
-                                    // If the tool call is a continuation of the last one, append to it
-                                    existingTool.function.arguments = (existingTool.function.arguments || '') + (toolCall.function?.arguments || '');
-                                } else {
-                                    // Otherwise, add a new tool call
-                                    accumulatedResponse.content[0].message.tool_calls.push(toolCall);
-                                }
-                            }
+                    bufferedChunk = this.mergeChunks(bufferedChunk, chunk);
 
+                    internalContext.response = undefined;
+                    internalContext.chunk = chunk;
+                    internalContext.bufferedChunk = bufferedChunk;
+                    internalContext.finalChunk = finalChunk;
+                    internalContext.accumulated_response = accumulatedResponse;
+
+                    if (accumulatedResponse === undefined) {
+                        res.status(200);
+                        res.setHeader('Transfer-Encoding', 'chunked');
+                        // @ts-ignore
+                        accumulatedResponse = {
+                            id: chunk?.id,
+                            object: chunk?.object,
+                            created: chunk?.created,
+                            model: chunk?.model,
+                            usage: chunk?.usage,
+                            content: [{
+                                index: 0,
+                                message: chunk?.content[0]?.message || chunk?.content[0]?.delta || {}
+                            }]
+                        };
+                    }
+
+                    const afterModelExecution = await this.pipelineManager.afterChunk(internalContext);
+                    if (afterModelExecution.finalResult.success === false) {
+                        // If the plugin execution failed, return the error response
+                        res.json({
+                            error: afterModelExecution.finalResult.error || 'Plugin execution failed',
+                            request_id: context.request_id,
+                            message: afterModelExecution.finalResult.error || 'An error occurred during plugin execution'
+                        });
+                        res.end();
+                        return;
+
+                    } else {
+                        bufferedChunk = afterModelExecution.finalResult.context.bufferedChunk || bufferedChunk;
+
+                        const shouldEmmit = afterModelExecution.finalResult.emitChunk !== undefined ? afterModelExecution.finalResult.emitChunk : true;
+
+                        if (shouldEmmit) {
+                            accumulatedResponse = this.mergeChunks(accumulatedResponse, bufferedChunk, false);
+
+                            const resp = await adapter.transformOutputChunk(internalContext.request, req.body, bufferedChunk, finalChunk, accumulatedResponse);
+                            res.write(resp.toString('utf-8'));
+                            bufferedChunk = undefined;
                         }
                     }
-                    if(chunk?.usage) {
-                        if(!accumulatedResponse.usage) {
-                            // @ts-ignore
-                            accumulatedResponse.usage = {};
-                        }
-                        accumulatedResponse.usage = { ...accumulatedResponse.usage, ...chunk?.usage};
+                    if (finalChunk) {
+                        internalContext.response = accumulatedResponse;
+                        internalContext.accumulated_response = accumulatedResponse;
+                        internalContext.metrics.end_time = new Date(Date.now());
+                        internalContext.metrics.duration_ms = internalContext.metrics.end_time.getTime() -internalContext.metrics.start_time.getTime();
+                        internalContext.metrics.input_tokens = internalContext.accumulated_response.usage?.prompt_tokens || 0;
+                        internalContext.metrics.output_tokens = internalContext.accumulated_response.usage?.completion_tokens || 0;
+                        internalContext.metrics.total_tokens = internalContext.metrics.input_tokens + internalContext.metrics.output_tokens;
+                        //Do not wait is fully async operation
+                        this.pipelineManager.detachedAfterResponse(internalContext);
+                        res.end();
                     }
+
+                }catch(error) {
+                    console.error('Error processing streaming chunk', error);
                 }
-
-                const afterModelExecution = await this.pipelineManager.afterChunk(internalContext);
-                if(afterModelExecution.finalResult.success === false) {
-                    // If the plugin execution failed, return the error response
-                    res.json({
-                        error: afterModelExecution.finalResult.error || 'Plugin execution failed',
-                        request_id: context.request_id,
-                        message: afterModelExecution.finalResult.error || 'An error occurred during plugin execution'
-                    });
-                    res.end();
-                    return;
-
-                } else {
-                    const shouldEmmit = afterModelExecution.finalResult.emitChunk !== undefined ? afterModelExecution.finalResult.emitChunk : true;
-
-                    if(shouldEmmit) {
-                        const resp = await adapter.transformOutputChunk(internalContext.request, req.body, afterModelExecution.finalResult.context.chunk, finalChunk, accumulatedResponse);
-                        res.write(resp.toString('utf-8'));
-                    }
-                }
-                if(finalChunk ) {
-                    //Do not wait is fully async operation
-                    this.pipelineManager.detachedAfterResponse(internalContext);
-                    res.end();
-                }
-
-
             }
         });
     }
@@ -287,15 +337,16 @@ export class GatewayServer {
         targetModel: string,
         req: express.Request,
         res: express.Response,
-        startTime: number
     ): Promise<void> {
         const providerResponse = await model.provider.execute(context.request);
 
         // Update context with response
         context.response = providerResponse;
-        context.metrics.end_time = Date.now();
-        context.metrics.duration_ms = context.metrics.end_time - startTime;
-
+        context.metrics.end_time =new Date();
+        context.metrics.duration_ms = context.metrics.end_time.getTime() - context.metrics.start_time.getTime();
+        context.metrics.input_tokens = providerResponse.usage?.prompt_tokens || 0;
+        context.metrics.output_tokens = providerResponse.usage?.completion_tokens || 0;
+        context.metrics.total_tokens = context.metrics.input_tokens + context.metrics.output_tokens;
         // Execute post-processing plugins
         const afterModelExecution = await this.pipelineManager.afterModel(context);
         const finalContext = {

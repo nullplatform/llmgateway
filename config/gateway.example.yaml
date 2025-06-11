@@ -10,6 +10,7 @@ server:
 
 availablePlugins:
   - path: "../plugins/logger/dist/index.js"
+  - path: "../plugins/tracer/dist/index.js"
   - path: "../plugins/regex-hider/dist/index.js"
 
 # Models are the main routing targets
@@ -62,11 +63,22 @@ plugins:
       patterns:
         - pattern: "\\b\\d{3}-\\d{2}-\\d{4}\\b"  # SSN format
           replacement: "[REDACTED|SSN]"
-        - pattern: "\\b\\d{16}\\b"  # Credit card format
+        - pattern: "\\b(?:\\d{4}[- ]?){3}\\d{4}\\b"
           replacement: "[REDACTED|CREDIT_CARD]"
-        - pattern: "\\b[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+\\b"  # Email address"  # Credit card format
+        - pattern: "\\b[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+\\b"  # Email address"
           replacement: "[REDACTED|PII]"
           applyTo: response
+  - name: tracer
+    type: tracer
+    priority: 100
+    config:
+      clickhouse:
+        host: "127.0.0.1"
+        username: "test"
+        password: "test"
+        database: "traces"
+      flushInterval: 1000
+
 
 
 # Monitoring configuration

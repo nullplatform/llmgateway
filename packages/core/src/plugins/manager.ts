@@ -96,6 +96,7 @@ export class PluginManager {
                         ...llmRequest.metadata,
                         ...(result?.context?.metadata ? result.context.metadata : {}),
                     }
+
                     request = result.context;
                     lastExecution = result;
                     executions.push({pluginName: config.name, result: lastExecution, executionTime: Date.now() - executionStart});
@@ -139,8 +140,6 @@ export class PluginManager {
     }
 
     async detachedAfterResponse(llmRequest: IRequestContext) : Promise<void> {
-        //Treat response and accumulated_response as the same because this phase is executed after the response is sent or stream finished
-        llmRequest.response = llmRequest.response || llmRequest.accumulated_response;
         return await this.executePluginFunction(llmRequest, 'detachedAfterResponse', true, true) as void;
     }
 

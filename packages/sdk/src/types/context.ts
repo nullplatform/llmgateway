@@ -3,13 +3,12 @@
 import { ILLMRequest, ILLMResponse } from './request.js';
 
 export interface IRequestMetrics {
-    start_time: number;
-    end_time?: number;
+    start_time: Date;
+    end_time?: Date;
     duration_ms?: number;
     input_tokens?: number;
     output_tokens?: number;
     total_tokens?: number;
-    cost_usd?: number;
 }
 
 export interface IHTTPRequest {
@@ -29,9 +28,11 @@ export interface IRequestContext {
     // Core request/response data
     request: ILLMRequest;
     response?: ILLMResponse; //If streaming, this will be undefined
+    adapter?: string;
+    chunk?: ILLMResponse; // For streaming responses, this will be the current chunk, It can't be modified, gateway will use bufferedChunk to send to the client
+    bufferedChunk?: ILLMResponse; // For streaming this is the accoumulated merged chunk that has not been sent yet if all chunks are emitted or is first chunk will be same that chunk
 
-    chunk?: ILLMResponse; // For streaming responses, this will be the current chunk
-    accumulated_response?: ILLMResponse; // For streaming, this will accumulate chunks
+    accumulated_response?: ILLMResponse; // For streaming, this is the whole answer merged chunk at the end this should be like a response without streaming
     finalChunk?: boolean; // Indicates if the current chunk is the final one
 
     httpRequest?: IHTTPRequest;
@@ -62,6 +63,7 @@ export interface IRequestContext {
 
     // Available models to route
     target_model?: string;
+    target_model_provider?: string;
     available_models?: string[];
     // Custom data for plugins
     metadata: Record<string, any>;

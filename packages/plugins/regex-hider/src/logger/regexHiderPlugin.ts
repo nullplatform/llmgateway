@@ -151,21 +151,67 @@ export class RegexHiderPlugin implements IPlugin {
 
             return { success: true };
         } catch (error) {
-            console.error('[RegexHiderPlugin] Error in beforeModel:', error);
+            console.error('[TracerPlugin] Error in beforeModel:', error);
             return {
                 success: false,
-                error: error instanceof Error ? error : new Error('Unknown error in RegexHiderPlugin')
+                error: error instanceof Error ? error : new Error('Unknown error in TracerPlugin')
             };
         }
     }
     async afterChunk(context: IRequestContext): Promise<IPluginResult> {
-        const bufferId = context.request_id;
+        try {
+            const chunkContent = this.extractChunkContent(context.bufferedChunk!);
+            // Determine if we should flush
+            const shouldFlush = this.shouldFlush(chunkContent, context.finalChunk);
 
-        if (context.chunk) {
-            return this.handleStreamingChunk(context, bufferId);
+            if (shouldFlush) {
+                let shouldBlock = false;
+                const processedContent = context.bufferedChunk.content.map(content => {
+                    const messageKey = content.message ? "message" : "delta";
+                    if (content[messageKey]?.content) {
+                        const { content: processedText, shouldBlock: contentBlocked } = this.processText(chunkContent, this.responsePatterns);
+                        if (contentBlocked) {
+                            shouldBlock = true;
+                            if (this.config.logMatches) {
+                                console.warn('[TracerPlugin] Sensitive data detected in response');
+                            }
+                        }
+                        return {
+                            ...content,
+                            [messageKey]: { ...content.message, content: processedText }
+                        };
+                    }
+                    return content;
+                });
+                if (shouldBlock) {
+                    return {
+                        success: false,
+                        status: 400,
+                        error: new Error('Request blocked due to sensitive data detection'),
+                        terminate: true
+                    };
+                }
+
+                context.bufferedChunk.content = processedContent;
+                return {
+                    success: true,
+                    emitChunk: true,
+                    context
+                }
+            } else {
+
+                return {
+                    success: true,
+                    emitChunk: false
+                };
+            }
+        } catch (error) {
+            console.error('[TracerPlugin] Error in handleStreamingChunk:', error);
+            return {
+                success: false,
+                error: error instanceof Error ? error : new Error('Unknown error in streaming chunk handler')
+            };
         }
-
-        return { success: true };
     }
     async afterModel(context: IRequestContext): Promise<IPluginResult> {
         if (this.responsePatterns.length === 0 || !context.request.stream) {
@@ -190,7 +236,7 @@ export class RegexHiderPlugin implements IPlugin {
                     if (contentBlocked) {
                         shouldBlock = true;
                         if (this.config.logMatches) {
-                            console.warn('[RegexHiderPlugin] Sensitive data detected in response');
+                            console.warn('[TracerPlugin] Sensitive data detected in response');
                         }
                     }
                     return {
@@ -214,62 +260,19 @@ export class RegexHiderPlugin implements IPlugin {
 
             return { success: true };
         } catch (error) {
-            console.error('[RegexHiderPlugin] Error in processNonStreamingResponse:', error);
+            console.error('[TracerPlugin] Error in processNonStreamingResponse:', error);
             return {
                 success: false,
-                error: error instanceof Error ? error : new Error('Unknown error in RegexHiderPlugin')
+                error: error instanceof Error ? error : new Error('Unknown error in TracerPlugin')
             };
         }
     }
 
-    private async handleStreamingChunk(context: IRequestContext, bufferId: string): Promise<IPluginResult> {
-        try {
-            // Get or create buffer state
-            let bufferState = this.bufferMap.get(bufferId);
-            if (!bufferState) {
-                bufferState = {
-                    content: '',
-                    context: context
-                };
-                this.bufferMap.set(bufferId, bufferState);
-            }
 
-            // Clear existing timer
-            if (bufferState.timer) {
-                clearTimeout(bufferState.timer);
-            }
-
-            // Extract chunk content
-            const chunkContent = this.extractChunkContent(context.chunk!);
-            bufferState.content += chunkContent;
-
-            // Determine if we should flush
-            const shouldFlush = this.shouldFlushBuffer(bufferState.content);
-
-            if (shouldFlush || context.finalChunk) {
-                return this.flushBuffer(bufferId, context.finalChunk || false);
-            } else {
-                // Set timeout for buffer flush
-                bufferState.timer = setTimeout(() => {
-                    this.flushBuffer(bufferId, false);
-                }, this.config.bufferConfig.timeout);
-
-                // Don't emit this chunk yet, we're buffering
-                return {
-                    success: true,
-                    emitChunk: false
-                };
-            }
-        } catch (error) {
-            console.error('[RegexHiderPlugin] Error in handleStreamingChunk:', error);
-            return {
-                success: false,
-                error: error instanceof Error ? error : new Error('Unknown error in streaming chunk handler')
-            };
+    private shouldFlush(content: string, isFinalChunk: boolean): boolean {
+        if(isFinalChunk) {
+            return true;
         }
-    }
-
-    private shouldFlushBuffer(content: string): boolean {
         const { flushOn, maxSize } = this.config.bufferConfig;
 
         switch (flushOn) {
@@ -286,61 +289,6 @@ export class RegexHiderPlugin implements IPlugin {
         }
     }
 
-    private async flushBuffer(bufferId: string, isFinal: boolean): Promise<IPluginResult> {
-        const bufferState = this.bufferMap.get(bufferId);
-        if (!bufferState) {
-            return { success: true };
-        }
-
-        try {
-            // Clear timer
-            if (bufferState.timer) {
-                clearTimeout(bufferState.timer);
-            }
-
-            // Process the buffered content
-            const { content: processedContent, shouldBlock } = this.processText(bufferState.content, this.responsePatterns);
-
-            if (shouldBlock) {
-                if (this.config.logMatches) {
-                    console.warn('[RegexHiderPlugin] Sensitive data detected in streaming response buffer');
-                }
-
-                // Clean up buffer
-                this.bufferMap.delete(bufferId);
-                return {
-                    success: false,
-                    status: 400,
-                    error: new Error('Response blocked due to sensitive data detection'),
-                    terminate: true
-                };
-            }
-
-            // Update chunk content with processed content
-            this.updateChunkContent(bufferState.context.chunk!, processedContent);
-
-            // If this is the final flush, clean up
-            if (isFinal) {
-                this.bufferMap.delete(bufferId);
-            } else {
-                // Reset buffer for next chunk
-                bufferState.content = '';
-            }
-
-            return {
-                success: true,
-                emitChunk: true,
-                context: bufferState.context
-            };
-        } catch (error) {
-            console.error('[RegexHiderPlugin] Error in flushBuffer:', error);
-            this.bufferMap.delete(bufferId);
-            return {
-                success: false,
-                error: error instanceof Error ? error : new Error('Unknown error in buffer flush')
-            };
-        }
-    }
 
     private processText(text: string, patterns: CompiledPattern[]): { content: string, shouldBlock: boolean } {
         let processedText = text;

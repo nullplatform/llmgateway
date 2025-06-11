@@ -18,7 +18,13 @@ export interface ModelConfig {
     modelConfig?: Record<string, any>;
     metadata?: Record<string, any>;
 }
+export interface PorjectConfig {
+    name: string;
+    description?: string;
+    models: Record<string, ModelConfig>;
+    plugins: Array<IPluginConfig>;
 
+}
 export interface GatewayConfig {
     server: {
         host: string;
@@ -28,12 +34,14 @@ export interface GatewayConfig {
             origins: string[];
         };
     };
-    models: Record<string, ModelConfig>;
+
     availablePlugins: Array<{
         path?: string;
         module?: string;
     }>;
+    models: Record<string, ModelConfig>;
     plugins: Array<IPluginConfig>;
+    projects: Array<PorjectConfig>;
     monitoring?: {
         enabled: boolean;
         metrics?: string[];

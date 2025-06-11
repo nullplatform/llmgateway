@@ -44,7 +44,9 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@clickhouse/client": "^1.11.2",
     "chokidar": "^4.0.3",
+    "clickhouse": "^2.6.0",
     "commander": "^14.0.0"
   }
 }

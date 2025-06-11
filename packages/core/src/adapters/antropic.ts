@@ -66,7 +66,7 @@ export interface AnthropicResponse {
 
 interface StreamingState {
     hasStarted: boolean;
-    textBlockStarted: boolean;
+    blockStarted: boolean;
     toolBlocksStarted: Set<string>;
     contentBlockIndex: number;
     lastToolCallId?: string;
@@ -207,6 +207,11 @@ export class AnthropicApiAdapter implements ILLMApiAdapter<AnthropicRequest, Ant
         return null; // No validation errors
     }
 
+    async getContentBlockFinish(idx): Promise<string> {
+        return `event: content_block_stop\ndata: {"type":"content_block_stop","index":${idx}         }\n\n`;
+    }
+
+
     async transformOutputChunk(
         processedInput: ILLMRequest,
         input: AnthropicRequest,
@@ -221,7 +226,7 @@ export class AnthropicApiAdapter implements ILLMApiAdapter<AnthropicRequest, Ant
         if (!this.streamingStateMap.has(requestId)) {
             this.streamingStateMap.set(requestId, {
                 hasStarted: false,
-                textBlockStarted: false,
+                blockStarted: false,
                 toolBlocksStarted: new Set(),
                 contentBlockIndex: 0,
                 lastToolCallId: undefined
@@ -259,7 +264,7 @@ export class AnthropicApiAdapter implements ILLMApiAdapter<AnthropicRequest, Ant
             }
 
             // Handle content_block_start for text content
-            if (choice?.delta?.content !== undefined && !state.textBlockStarted) {
+            if (choice?.delta?.content !== undefined && !state.blockStarted) {
                 response += `event: content_block_start\n`;
                 response += `data: ${JSON.stringify({
                     type: "content_block_start",
@@ -269,18 +274,19 @@ export class AnthropicApiAdapter implements ILLMApiAdapter<AnthropicRequest, Ant
                         text: ""
                     }
                 })}\n\n`;
-                state.textBlockStarted = true;
+                state.blockStarted = true;
             }
 
             // Handle content_block_start for tool calls
             if (choice?.delta?.tool_calls) {
                 const toolCall = choice.delta.tool_calls[0];
                 if (toolCall?.id && !state.toolBlocksStarted.has(toolCall.id)) {
-                    if(state.textBlockStarted) {
+                    if(state.blockStarted) {
                         // Increment contentBlockIndex if text block was started
-                        state.textBlockStarted = false;
-                        response += `event: content_block_stop\ndata: {"type":"content_block_stop","index":${state.contentBlockIndex++}         }\n\n`;
+                        state.blockStarted = false;
+                        response += await this.getContentBlockFinish(state.contentBlockIndex++);
                     }
+                    state.blockStarted = true;
                     response += `event: content_block_start\n`;
                     response += `data: ${JSON.stringify({
                         type: "content_block_start",
@@ -330,11 +336,8 @@ export class AnthropicApiAdapter implements ILLMApiAdapter<AnthropicRequest, Ant
 
             // Handle content_block_stop when finishing text or tool
             if (choice?.finish_reason && state.contentBlockIndex > 0) {
-                response += `event: content_block_stop\n`;
-                response += `data: ${JSON.stringify({
-                    type: "content_block_stop",
-                    index: state.contentBlockIndex
-                })}\n\n`;
+                state.blockStarted = false;
+                response += await this.getContentBlockFinish(state.contentBlockIndex++);
             }
 
 
@@ -351,6 +354,10 @@ export class AnthropicApiAdapter implements ILLMApiAdapter<AnthropicRequest, Ant
         }
 
         if (finalChunk) {
+            if(state.blockStarted) {
+                state.blockStarted = false;
+                response += await this.getContentBlockFinish(state.contentBlockIndex++);
+            }
             response += `event: message_delta\n`;
             response += `data: ${JSON.stringify({
                 type: "message_delta",
@@ -383,7 +390,7 @@ export class AnthropicApiAdapter implements ILLMApiAdapter<AnthropicRequest, Ant
         const toolIndex = toolIds.indexOf(toolCallId);
 
         // Text block takes index 0 if it exists, tools start from 1
-        return state.textBlockStarted ? toolIndex + 1 : toolIndex;
+        return state.blockStarted ? toolIndex + 1 : toolIndex;
     }
 
     private mapFinishReasonToAnthropic(finishReason?: string): string | null {
