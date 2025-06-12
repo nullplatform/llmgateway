@@ -1,4 +1,4 @@
-// packages/core/src/plugins/manager.ts
+// packages/core/basic-apikey-auth/plugins/manager.ts
 
 import * as path from 'path';
 

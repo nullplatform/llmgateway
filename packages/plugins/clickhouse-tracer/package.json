@@ -1,6 +1,6 @@
 {
   "name": "@nullplatform/llm-gateway-clickhouse-tracer-plugin",
-  "version": "1.0.0",
+	  "version": "1.0.4",
   "description": "LLM Gateway - Regex Hidder Plugin",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -16,7 +16,8 @@
     "test": "jest"
   },
   "dependencies": {
-    "@nullplatform/llm-gateway-sdk": "^1.0.0"
+    "@clickhouse/client": "^1.11.2",
+    "@nullplatform/llm-gateway-sdk": "^1.0.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.0",

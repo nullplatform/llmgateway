@@ -39,7 +39,10 @@ export class GatewayServer {
 
     constructor(config: string | GatewayConfig) {
         this.app = express();
-        this.logger = new Logger();
+
+        if(!config) {
+            throw new Error('Configuration is required to initialize GatewayServer');
+        }
         if(typeof config === 'string') {
             this.configLoader = new ConfigLoader(config);
         } else {
@@ -53,7 +56,7 @@ export class GatewayServer {
 
         // CORS
         this.app.use(cors({
-            origin: this.configLoader.get('server.cors.origins', ['*']),
+            origin: this.config?.server?.cors?.origins || ['*'],
             credentials: true
         }));
 
@@ -84,7 +87,7 @@ export class GatewayServer {
     private async setupRoutes(): Promise<void> {
 
         // Health check endpoint
-        this.app.get('/health', (req, res) => {
+        this.app.get(this.config?.monitoring?.health_check?.endpoint || '/health', (req, res) => {
             res.json({
                 status: 'healthy',
                 timestamp: new Date().toISOString(),
@@ -486,10 +489,13 @@ export class GatewayServer {
     }
 
     async initialize(): Promise<void> {
+
         if (this.configLoader) {
             await this.configLoader.load();
             this.config = this.configLoader.getConfig();
         }
+        this.logger = new Logger(this.config?.logging?.level);
+
         this.maxRetries = Math.max(this.config.maxRetries || 3, 1);
         this.pluginFactory = new PluginFactory(this.config.availablePlugins, this.logger);
         await this.pluginFactory.initializePlugins();
@@ -535,7 +541,7 @@ export class GatewayServer {
         }
     }
 
-    async start(port: number = 3000): Promise<void> {
+    async start(): Promise<void> {
         // Load configuration
 
         await this.initialize();
@@ -544,6 +550,7 @@ export class GatewayServer {
         await this.setupRoutes();
         this.setupErrorHandling();
 
+        const port = this.config?.server?.port;
         // Start server
         return new Promise((resolve) => {
             this.app.listen(port, () => {

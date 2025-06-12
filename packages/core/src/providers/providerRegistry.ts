@@ -1,4 +1,4 @@
-// packages/core/src/providers/providerRegistry.ts
+// packages/core/basic-apikey-auth/providers/providerRegistry.ts
 
 import { IProvider, IProviderFactory, IProviderRegistry } from '@nullplatform/llm-gateway-sdk';
 import { Logger } from '../utils/logger.js';

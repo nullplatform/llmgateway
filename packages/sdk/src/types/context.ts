@@ -1,4 +1,4 @@
-// packages/sdk/src/types/context.ts
+// packages/sdk/basic-apikey-auth/types/context.ts
 
 import { ILLMRequest, ILLMResponse } from './request.js';
 

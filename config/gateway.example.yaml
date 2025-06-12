@@ -9,11 +9,8 @@ server:
     origins: ["*"]
 
 availablePlugins:
-  - path: "../plugins/model-router/dist/index.js"
-  - path: "../plugins/basic-apikey-auth/dist/index.js"
   - path: "../plugins/logger/dist/index.js"
   - module: "@nullplatform/llm-gateway-clickhouse-tracer-plugin"
-  - path: "../plugins/regex-hider/dist/index.js"
 
 # Models are the main routing targets
 # Each model has a provider configuration and can have custom settings

@@ -1,4 +1,4 @@
-// packages/sdk/src/types/request.ts
+// packages/sdk/basic-apikey-auth/types/request.ts
 
 export interface IMessage {
     role: 'system' | 'user' | 'assistant' | 'tool';

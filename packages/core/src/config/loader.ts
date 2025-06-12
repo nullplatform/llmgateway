@@ -1,4 +1,4 @@
-// packages/core/src/config/loader.ts
+// packages/core/basic-apikey-auth/config/loader.ts
 
 import * as fs from 'fs/promises';
 import * as path from 'path';

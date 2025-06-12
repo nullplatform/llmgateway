@@ -45,18 +45,11 @@ export interface GatewayConfig {
     projects: Array<PorjectConfig>;
     monitoring?: {
         enabled: boolean;
-        metrics?: string[];
         health_check?: {
             enabled: boolean;
             interval: number;
             endpoint: string;
         };
-    };
-    cache?: {
-        enabled: boolean;
-        provider: 'memory' | 'redis';
-        connection?: string;
-        ttl?: number;
     };
     logging: {
         level: 'debug' | 'info' | 'warn' | 'error';

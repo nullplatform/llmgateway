@@ -1,4 +1,4 @@
-// packages/sdk/src/utils/validation.ts
+// packages/sdk/basic-apikey-auth/utils/validation.ts
 
 import { ILLMRequest, IMessage } from '../types/request.js';
 

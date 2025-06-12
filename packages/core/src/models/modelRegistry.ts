@@ -1,4 +1,4 @@
-// packages/core/src/models/modelRegistry.ts
+// packages/core/basic-apikey-auth/models/modelRegistry.ts
 
 import { IModel, IModelRegistry } from '@nullplatform/llm-gateway-sdk';
 import { Logger } from '../utils/logger.js';

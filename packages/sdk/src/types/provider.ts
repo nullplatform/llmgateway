@@ -1,4 +1,4 @@
-// packages/sdk/src/types/provider.ts
+// packages/sdk/basic-apikey-auth/types/provider.ts
 
 import { ILLMRequest, ILLMResponse } from './request.js';
 import {IHTTPRequest, IHTTPResponse} from "./context.js";

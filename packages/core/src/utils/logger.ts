@@ -1,4 +1,4 @@
-// packages/core/src/utils/clickhouse-tracer.ts
+// packages/core/basic-apikey-auth/utils/clickhouse-tracer.ts
 
 import * as winston from 'winston';
 
@@ -59,7 +59,7 @@ export class Logger {
     }
 
     error(message: string, meta?: any): void {
-        const err = meta.error ? meta.error : meta;
+        const err = meta?.error ? meta.error : meta;
         this.winston.error(message, err);
     }
 

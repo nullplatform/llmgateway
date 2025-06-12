@@ -1,5 +1,5 @@
 {
-  "name": "@nullplatform/llm-gateway-core",
+  "name": "@nullplatform/llm-gateway",
   "version": "1.0.0",
   "description": "LLM Gateway Core - Main proxy server",
   "main": "dist/index.js",
@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "cli": "tsx  src/cli.ts",
     "dev": "tsx watch src/index.ts",
     "debug": "tsx src/index.ts",
     "start": "node dist/index.js",
@@ -18,6 +19,7 @@
   "dependencies": {
     "@nullplatform/llm-gateway-sdk": "^1.0.0",
     "axios": "^1.6.0",
+    "commander": "^14.0.0",
     "cors": "^2.8.0",
     "dotenv": "^16.3.0",
     "express": "^4.18.0",

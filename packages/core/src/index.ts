@@ -1,4 +1,4 @@
-// packages/core/src/index.ts
+// packages/core/basic-apikey-auth/index.ts
 
 import * as dotenv from 'dotenv';
 import { GatewayServer } from './gateway.js';
@@ -16,7 +16,7 @@ async function main() {
         const server = new GatewayServer("../../config/gateway.example.yaml");
         const port = parseInt(process.env.PORT || '3000', 10);
 
-        await server.start(port);
+        await server.start();
 
         // Graceful shutdown handling
         process.on('SIGTERM', async () => {

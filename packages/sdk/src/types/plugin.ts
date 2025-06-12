@@ -1,4 +1,4 @@
-// packages/sdk/src/types/plugin.ts
+// packages/sdk/basic-apikey-auth/types/plugin.ts
 
 import {IRequestContext} from './context.js';
 

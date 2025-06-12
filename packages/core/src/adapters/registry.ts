@@ -1,4 +1,4 @@
-// packages/core/src/adapters/input/modelRegistry.ts
+// packages/core/basic-apikey-auth/adapters/input/modelRegistry.ts
 
 import { ILLMApiAdapter } from '@nullplatform/llm-gateway-sdk';
 import { Logger } from '../utils/logger.js';

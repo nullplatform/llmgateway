@@ -1,4 +1,4 @@
-// packages/core/src/providers/anthropic.ts
+// packages/core/basic-apikey-auth/providers/anthropic.ts
 
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import {

@@ -1,4 +1,4 @@
-// packages/core/src/providers/openai.ts
+// packages/core/basic-apikey-auth/providers/openai.ts
 
 import axios, {AxiosError, AxiosInstance, AxiosRequestConfig} from 'axios';
 import {

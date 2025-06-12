@@ -1,4 +1,4 @@
-// packages/sdk/src/index.ts
+// packages/sdk/basic-apikey-auth/index.ts
 
 // Types exports
 export * from './types/request.js';
