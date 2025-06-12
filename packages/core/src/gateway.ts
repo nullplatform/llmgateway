@@ -259,7 +259,17 @@ export class GatewayServer {
                 [messageContentKey]: {}
             };
         }
-        merged.content[lastContentIndex][messageContentKey].content = `${merged?.content?.[chunkIndex]?.[messageContentKey]?.content || ''}${chunk?.content?.[chunkIndex]?.delta?.content || chunk?.content?.[chunkIndex]?.message?.content || ''}`;
+
+        const chunkContent = chunk?.content?.[chunkIndex]?.delta || chunk?.content?.[chunkIndex]?.message
+        const chunkContentMessage = chunkContent?.content;
+        if(chunkContentMessage !== undefined && chunkContentMessage !== null) {
+            merged.content[lastContentIndex][messageContentKey].content = `${merged?.content?.[chunkIndex]?.[messageContentKey]?.content || ''}${chunkContentMessage}`;
+        }
+
+        if(chunkContent?.role) {
+            merged.content[lastContentIndex][messageContentKey].role = chunkContent.role;
+        }
+
         merged.content[lastContentIndex].finish_reason = merged.content[lastContentIndex].finish_reason || chunk?.content?.[chunkIndex]?.finish_reason;
         if(chunk?.content?.[chunkIndex]?.delta?.tool_calls || chunk?.content?.[chunkIndex]?.message?.tool_calls) {
             if(!merged?.content[lastContentIndex]?.[messageContentKey]?.tool_calls) {
@@ -284,10 +294,17 @@ export class GatewayServer {
             }
         }
         // Merge usage
-        merged.usage  =  {
-            ...merged.usage,
-            ...chunk?.usage
-        };
+        if(chunk?.usage) {
+            if(merged.usage === undefined || merged.usage === null) {
+                // @ts-ignore
+                merged.usage = {};
+            }
+            for(const [entry,value] of Object.entries(chunk.usage)) {
+                if(value !== undefined) {
+                    merged.usage[entry] = value;
+                }
+            }
+        }
         return merged;
     }
 
@@ -361,10 +378,11 @@ export class GatewayServer {
                         const shouldEmmit = afterModelExecution.finalResult.emitChunk !== undefined ? afterModelExecution.finalResult.emitChunk : true;
 
                         if (shouldEmmit) {
-                            firstChunkEmitted = true;
                             accumulatedResponse = this.mergeChunks(accumulatedResponse, bufferedChunk, false);
 
-                            const resp = await adapter.transformOutputChunk(internalContext.request, req.body, bufferedChunk, finalChunk, accumulatedResponse);
+                            const resp = await adapter.transformOutputChunk(internalContext.request, req.body, bufferedChunk, !firstChunkEmitted, finalChunk, accumulatedResponse);
+                            firstChunkEmitted = true;
+
                             res.write(resp.toString('utf-8'));
                             bufferedChunk = undefined;
                         }

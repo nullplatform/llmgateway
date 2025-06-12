@@ -220,7 +220,8 @@ export class OpenAIApiAdapter implements ILLMApiAdapter<OpenAIRequest, OpenAIRes
 
     async transformOutputChunk( processedInput: ILLMRequest,
                                 input: OpenAIRequest,
-                                chunk: ILLMResponse, finalChunk: boolean, acummulated: ILLMResponse): Promise<Buffer> {
+                                chunk: ILLMResponse, firstChunk: boolean, finalChunk: boolean,
+                                acummulated: ILLMResponse): Promise<Buffer> {
         let response = "";
 
         if(chunk) {
@@ -232,8 +233,8 @@ export class OpenAIApiAdapter implements ILLMApiAdapter<OpenAIRequest, OpenAIRes
                 choices: chunk?.content ?  chunk.content.map((choice, index) => ({
                     index,
                     delta: {
-                        role: choice.delta?.role,
-                        content: choice.delta?.content,
+                        role: firstChunk? 'assistant': null, //open ai streaming ever answer assistant
+                        content: choice.delta?.tool_calls?.length > 0 ? null : choice.delta?.content || null,
                         tool_calls: choice.delta?.tool_calls?.map(tool => ({
                             id: tool.id,
                             type: tool.type,

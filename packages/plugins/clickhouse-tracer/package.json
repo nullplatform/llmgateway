@@ -1,5 +1,5 @@
 {
-  "name": "@nullplatform/llm-gateway-reggex-hidder-plugin",
+  "name": "@nullplatform/llm-gateway-clickhouse-tracer-plugin",
   "version": "1.0.0",
   "description": "LLM Gateway - Regex Hidder Plugin",
   "main": "dist/index.js",

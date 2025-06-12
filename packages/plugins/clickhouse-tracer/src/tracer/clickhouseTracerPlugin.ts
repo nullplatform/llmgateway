@@ -219,7 +219,9 @@ export class ClickhouseTracerPlugin implements IPlugin {
     }
 
     private requestWasTollCallback(request: ILLMRequest): boolean {
-        return request?.messages?.length > 2 && request?.messages[request.messages.length - 2]?.tool_calls?.length > 0;
+        return request?.messages?.some((message) => {
+           return  message.tool_calls?.length > 0 || message.tool_call_id
+        });
     }
 
     private lookForFirstToolId(content: Partial<IMessage>[]): string | undefined {

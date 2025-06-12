@@ -59,7 +59,7 @@ export interface ILLMApiAdapter<TInput = any, TOutput = any> {
     transformOutput(processedInput: ILLMRequest, input: TInput, response: ILLMResponse): Promise<TOutput>;
     transformOutputChunk(processedInput: ILLMRequest,
                           input: TInput,
-                          chunk: ILLMResponse, finalChunk: boolean, acummulated: ILLMResponse): Promise<Buffer>;
+                          chunk: ILLMResponse, firstChunk: boolean, finalChunk: boolean, acummulated: ILLMResponse): Promise<Buffer>;
     // Native adapters to handle specific native apis for example /models
     getNativeAdapters?(): Promise<Array<INativeAdapter>>;
 }

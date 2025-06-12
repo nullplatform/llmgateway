@@ -216,6 +216,7 @@ export class AnthropicApiAdapter implements ILLMApiAdapter<AnthropicRequest, Ant
         processedInput: ILLMRequest,
         input: AnthropicRequest,
         chunk: ILLMResponse,
+        firstChunk: boolean,
         finalChunk: boolean,
         accumulated: ILLMResponse
     ): Promise<Buffer> {

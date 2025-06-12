@@ -12,7 +12,7 @@ availablePlugins:
   - path: "../plugins/model-router/dist/index.js"
   - path: "../plugins/basic-apikey-auth/dist/index.js"
   - path: "../plugins/logger/dist/index.js"
-  - path: "../plugins/clickhouse-tracer/dist/index.js"
+  - module: "@nullplatform/llm-gateway-clickhouse-tracer-plugin"
   - path: "../plugins/regex-hider/dist/index.js"
 
 # Models are the main routing targets
@@ -87,9 +87,8 @@ projects:
       - name: "router"
         type: "model-router"
         config:
-          model: "gpt2"
+          model: "gpt"
           fallbacks:
-            - "claude"
             - "gpt"
             - "claude"
 #      - name: "basic-apikey-auth"
@@ -113,7 +112,7 @@ plugins:
           replacement: "[REDACTED|SSN]"
         - pattern: "\\b(?:\\d{4}[- ]?){3}\\d{4}\\b"
           replacement: "[REDACTED|CREDIT_CARD]"
-        - pattern: "\\b[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+\\b"  # Email address"
+        - pattern: "[a-zA-Z0-9_.+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z0-9.]+"  # Email address"
           replacement: "[REDACTED|PII]"
           applyTo: response
   - name: clickhouse-tracer

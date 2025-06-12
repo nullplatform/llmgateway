@@ -1,6 +1,6 @@
 {
   "name": "@nullplatform/llm-gateway-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "SDK for LLM Gateway plugin development",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -35,5 +35,8 @@
     "url": "https://github.com/nullplatform/llm-gateway",
     "directory": "packages/sdk"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@nullplatform/llm-gateway-sdk": "^1.0.0"
+  }
 }
