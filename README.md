@@ -6,8 +6,12 @@ The gateway is designed over the idea of to be completely extensible, allowing y
 It supports both synchronous and streaming requests, making it suitable for a wide range of applications.
 
 ## 🚀 What is LLM Gateway?
-
 LLM Gateway is a proxy server that sits between your applications and various LLM providers (OpenAI, Anthropic, etc.), offering:
+
+
+
+![LLM Gateway Architecture](./docs/images/architecture.png)
+
 - **API Agnostic**: Supports multiple LLM providers APIs making it work without changing your existing codebase or tooling
 - **Model Routing**: Intelligent routing with fallback support, you can change the **model** and the **provider** without changing your application code
 - **Plugin System**: Extensible architecture for custom functionality
@@ -263,8 +267,11 @@ export class MyCustomPlugin implements IPlugin {
 }
 ```
 
-### Request Lifecycle
+### Request Lifecycle<div style="text-align: center;">
 
+<div style="text-align: center;">
+ <img src="./docs/images/lifecycle.png" alt="LLM Gateway Request Life Cycle" width="300" height="500">
+</div>
 1. **adapterHandleRequest**: When communication is initiated the adapter handle the request and transform it into a request context object (`IRequestContext`).
 
 2. **beforeModel**: Executed before sending request to LLM provider in all pluguins sequentially
