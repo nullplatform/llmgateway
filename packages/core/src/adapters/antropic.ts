@@ -320,13 +320,12 @@ export class AnthropicApiAdapter implements ILLMApiAdapter<AnthropicRequest, Ant
             // Handle content_block_delta for tool calls
             if (choice?.delta?.tool_calls) {
                 const toolCall = choice.delta.tool_calls[0];
-                const toolBlockIndex = this.getToolBlockIndex(state, toolCall?.id);
 
                 if (toolCall?.function?.arguments) {
                     response += `event: content_block_delta\n`;
                     response += `data: ${JSON.stringify({
                         type: "content_block_delta",
-                        index: toolBlockIndex,
+                        index: state.contentBlockIndex,
                         delta: {
                             type: "input_json_delta",
                             partial_json: toolCall.function.arguments
@@ -380,18 +379,6 @@ export class AnthropicApiAdapter implements ILLMApiAdapter<AnthropicRequest, Ant
         }
 
         return Buffer.from(response);
-    }
-
-    private getToolBlockIndex(state: StreamingState, toolCallId?: string): number {
-        if (!toolCallId) return 1;
-
-        // Tool blocks come after text block (if any)
-        // For simplicity, we'll use the order they were added to the set
-        const toolIds = Array.from(state.toolBlocksStarted);
-        const toolIndex = toolIds.indexOf(toolCallId);
-
-        // Text block takes index 0 if it exists, tools start from 1
-        return state.blockStarted ? toolIndex + 1 : toolIndex;
     }
 
     private mapFinishReasonToAnthropic(finishReason?: string): string | null {

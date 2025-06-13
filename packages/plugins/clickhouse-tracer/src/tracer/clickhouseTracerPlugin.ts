@@ -327,7 +327,7 @@ export class ClickhouseTracerPlugin implements IPlugin {
                 response_content: context.response?.content,
                 is_tool_callback: this.requestWasTollCallback(context.request) ? true : false,
                 is_tool_usage: context.response?.content?.some(content =>
-                    content.message?.role === 'tool' || content.message?.tool_call_id
+                    content.message?.role === 'tool' || content.message?.tool_call_id || content.message?.tool_calls?.length > 0
                 ) ? true : false,
                 tool_calls: toolCalls,
                 duration_ms: context.metrics.duration_ms,
