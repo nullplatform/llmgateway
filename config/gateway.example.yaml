@@ -84,7 +84,7 @@ projects:
       - name: "router"
         type: "model-router"
         config:
-          model: "gpt"
+          model: "claude"
           fallbacks:
             - "gpt"
             - "claude"
