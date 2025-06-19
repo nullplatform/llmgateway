@@ -126,7 +126,7 @@ export class ClickhouseTracerPlugin implements IPlugin {
             });
             return true;
         } catch (error) {
-            return `Failed to connect to ClickHouse: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            throw `Failed to connect to ClickHouse: ${error instanceof Error ? error.message : 'Unknown error'}`;
         }
     }
 
@@ -166,8 +166,8 @@ export class ClickhouseTracerPlugin implements IPlugin {
             experiment_variant Nullable(String),
             client_ip Nullable(String),
             user_agent Nullable(String),
-            headers Nullable(JSON),
-            metadata Nullable(JSON),
+            headers JSON DEFAULT '{}',
+            metadata JSON DEFAULT '{}',
             error_message Nullable(String),
             retry_count Nullable(UInt8),
             finish_reason Nullable(String),

@@ -1,4 +1,4 @@
-import {IPlugin, PluginMetadata,IPluginMetadata, IRequestContext, IPluginResult} from '@nullplatform/llm-gateway-sdk';
+import {IPlugin, PluginMetadata, IRequestContext, IPluginResult} from '@nullplatform/llm-gateway-sdk';
 
 export class ModelRoutingPluginConfig {
     model: string; //simply select
@@ -14,7 +14,13 @@ export class ModelRouterPlugin implements IPlugin {
     private config: ModelRoutingPluginConfig;
     private fullFallbacks: Array<string> = [];
     async configure(config: ModelRoutingPluginConfig): Promise<void> {
-        this.fullFallbacks = [config?.model, ...config?.fallbacks] ;
+        this.fullFallbacks = [] ;
+        if(config.model) {
+            this.fullFallbacks.push(config.model);
+        }
+        if(config.fallbacks && Array.isArray(config.fallbacks)) {
+            this.fullFallbacks.push(...config.fallbacks);
+        }
         this.config = config;
     }
 

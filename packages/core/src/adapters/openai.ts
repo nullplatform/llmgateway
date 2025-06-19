@@ -266,13 +266,15 @@ export class OpenAIApiAdapter implements ILLMApiAdapter<OpenAIRequest, OpenAIRes
     ): Promise<OpenAIResponse> {
         const messages = response.content.map((choice, index) => {
             let message;
-            if(choice.message.role == 'tool') {
+            if(choice.message.tool_calls?.length > 0) {
                 const tool_calls = choice.message.tool_calls?.map(tool => ({
                     id: tool.id,
                     type: 'function',
                     function: {
                         name: tool.function.name,
-                        arguments: `${JSON.stringify(tool.function.arguments)}`
+                        arguments: typeof tool.function.arguments === 'string'
+                            ? tool.function.arguments
+                            : JSON.stringify(tool.function.arguments)
                     }
                 }));
                 message= {

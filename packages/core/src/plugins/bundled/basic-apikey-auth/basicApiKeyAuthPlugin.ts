@@ -48,6 +48,7 @@ export class BasicApiKeyAuthPlugin implements IPlugin {
         if(this.config.apikeys.indexOf(apiKey) === -1) {
             return {
                 success: false,
+                terminate: true,
                 status: 401,
                 error: new Error('Unauthorized: Invalid API key')
             };
