@@ -173,6 +173,105 @@ plugins:
   - `replacement` (string): Replacement text
   - `applyTo` (string): Apply to "request" or "response" or "both" (default: both)
 
+### Prompt Manager
+
+Manages and injects prompts with different injection modes and A/B testing support.
+
+```yaml
+plugins:
+  - name: prompt-manager
+    type: prompt-manager
+    config:
+      prompt: "You are a helpful AI assistant. Always respond in a professional manner."
+      mode: "override"
+      experiment:
+        prompt: "You are an enthusiastic AI assistant. Use emojis and be friendly!"
+        percentage: 25
+```
+
+**Options:**
+- `prompt` (string, required): The prompt to inject into system messages
+- `mode` (string): Injection mode - one of:
+    - `override` (default): Completely replaces existing system prompt
+    - `before`: Prepends the prompt to existing system prompt
+    - `after`: Appends the prompt to existing system prompt
+    - `wrapper`: Uses `${PROMPT}` placeholder to inject existing prompt within template
+- `experiment` (object, optional): A/B testing configuration
+    - `prompt` (string, required): Alternative prompt for experimentation
+    - `percentage` (number, required): Percentage (0-100) of requests using experimental prompt
+
+**Injection Modes Examples:**
+
+```yaml
+# Override mode - replaces existing system prompt completely
+- name: prompt-override
+  type: prompt-manager
+  config:
+    prompt: "You are a customer service assistant."
+    mode: "override"
+
+# Before mode - prepends to existing prompt
+- name: prompt-before
+  type: prompt-manager-router
+  config:
+    prompt: "IMPORTANT: Follow all safety guidelines."
+    mode: "before"
+
+# After mode - appends to existing prompt
+- name: prompt-after
+  type: prompt-manager
+  config:
+    prompt: "Always end responses with: 'Is there anything else I can help you with?'"
+    mode: "after"
+
+# Wrapper mode - inject existing prompt into template
+- name: prompt-wrapper
+  type: prompt-manager
+  config:
+    prompt: "Context: You are in debugging mode.\n\n${PROMPT}\n\nRemember to be extra careful with your responses."
+    mode: "wrapper"
+```
+
+***Note: You can have many prompt manager plugins in the same project, they will be applied in priority order, metadata will only contain the first applied***
+
+**A/B Testing Example:**
+
+```yaml
+# 30% of requests will use the experimental prompt
+plugins:
+  - name: prompt-experiment
+    type: prompt-manager
+    config:
+      prompt: "You are a professional AI assistant."
+      mode: "override"
+      experiment:
+        prompt: "You are a creative and innovative AI assistant who thinks outside the box."
+        percentage: 30
+```
+
+**Metadata Injection:**
+
+The plugin automatically adds metadata to track prompt usage:
+
+```json
+{
+  "prompt_manager": {
+    "used_prompt": "Final system prompt sent to model",
+    "original_prompt": "Original system prompt from request",
+    "injected_prompt": "Prompt injected by plugin",
+    "injection_mode": "override",
+    "is_experiment": false,
+    "experiment_percentage": 25
+  }
+}
+```
+
+This metadata is useful for:
+- Analytics and monitoring prompt performance
+- A/B testing analysis
+- Debugging prompt injection issues
+- Tracking which prompts are being used in production
+
 ## Known Plugins
 
 ### ClickHouse Tracer

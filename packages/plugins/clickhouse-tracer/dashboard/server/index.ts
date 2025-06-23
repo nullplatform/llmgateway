@@ -264,7 +264,8 @@ app.get('/api/conversation/:interactionId', async (req: Request, res: Response) 
         stream: parseInt(row.stream) || 0,
         is_tool_callback: Boolean(row.is_tool_callback),
         is_tool_usage: Boolean(row.is_tool_usage),
-        retry_count: parseInt(row.retry_count) || 0
+        retry_count: parseInt(row.retry_count) || 0,
+        metadata: row.metadata ? row.metadata : {},
       }))
     };
     

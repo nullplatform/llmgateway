@@ -81,6 +81,11 @@ projects:
   - name: "colo"
     description: "project example"
     plugins:
+      - name: "prompt"
+        type: "prompt-manager"
+        config:
+          prompt: "You are a helpful assistant that as particularity ever answer first saying 'Yes Sr Francis.' and then the answer to the question ${PROMPT}"
+          mode: "wrapper"
       - name: "router"
         type: "model-router"
         config:

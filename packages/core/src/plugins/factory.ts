@@ -9,6 +9,7 @@ import { existsSync, readFileSync, readdirSync } from "fs";
 import {RegexHiderPlugin} from "./bundled/retex-hider/regexHiderPlugin.js";
 import {BasicApiKeyAuthPlugin} from "./bundled/basic-apikey-auth/basicApiKeyAuthPlugin.js";
 import {ModelRouterPlugin} from "./bundled/model-router/modelRouterPlugin.js";
+import {PromptManagerPlugin} from "./bundled/promt-manager/promtManagerPlugin";
 
 export class PluginFactory {
     private plugins: Map<string, new (...args: any[]) => IPlugin> = new Map();
@@ -60,8 +61,7 @@ export class PluginFactory {
                     this.logger.info(`Resolved module ${moduleName} globally at: ${globalPath}`);
 
                     // Try to find the correct entry point for the global module
-                    const entryPoint = this.findModuleEntryPoint(globalPath, moduleName);
-                    return entryPoint;
+                    return this.findModuleEntryPoint(globalPath, moduleName);
                 } else {
                     throw new Error(`Global module path not found: ${globalPath}`);
                 }
@@ -268,6 +268,8 @@ export class PluginFactory {
         this.plugins.set('model-router', ModelRouterPlugin);
         this.plugins.set('basic-apikey-auth', BasicApiKeyAuthPlugin);
         this.plugins.set('regex-hider',RegexHiderPlugin)
+        this.plugins.set('prompt-manager',PromptManagerPlugin);
+
     }
 
     // Utility method to create plugin instances
@@ -279,13 +281,4 @@ export class PluginFactory {
         return null;
     }
 
-    // Get all registered plugin names
-    getAvailablePlugins(): string[] {
-        return Array.from(this.plugins.keys());
-    }
-
-    // Check if a plugin is registered
-    hasPlugin(name: string): boolean {
-        return this.plugins.has(name);
-    }
 }

@@ -158,6 +158,23 @@ export const ConversationDetail: React.FC<ConversationDetailProps> = ({ clickHou
             </div>
           </div>
 
+          {record.metadata && Object.keys(record.metadata).length > 0 && (
+            <div style={{ marginBottom: '1rem' }}>
+              <h4>Metadata:</h4>
+              <pre style={{
+                backgroundColor: '#e8f4f8',
+                padding: '1rem',
+                borderRadius: '4px',
+                fontSize: '12px',
+                overflow: 'auto',
+                maxHeight: '200px',
+                border: '1px solid #bee5eb'
+              }}>
+                {formatJSON(record.metadata)}
+              </pre>
+            </div>
+          )}
+
           {record.messages && record.messages.length > 0 && (
             <div style={{ marginBottom: '1rem' }}>
               <h4>Messages:</h4>
