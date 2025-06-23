@@ -49,6 +49,9 @@ app.post('/api/test-connection', async (req: Request, res: Response) => {
     });
   }
 });
+app.get('/api/health', async (req: Request, res: Response) => {
+  res.json({ status: 'ok' });
+})
 
 // Get token consumption by model
 app.get('/api/token-consumption', async (req: Request, res: Response) => {
