@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 import { ClickHouseConfig } from '../types';
 import { ClickHouseService } from '../utils/clickhouse';
-
+const defaultUrl = import.meta.env.VITE_DEFAULT_CLICKHOUSE_URL ||'http://localhost:8123'
+const defaultUsername = import.meta.env.VITE_DEFAULT_CLICKHOUSE_USERNAME || 'default';
+const defaultPassword = import.meta.env.VITE_DEFAULT_CLICKHOUSE_PASSWORD || '';
+const defaultDatabase = import.meta.env.VITE_DEFAULT_CLICKHOUSE_DATABASE || '';
 interface LoginProps {
   onLogin: (config: ClickHouseConfig) => void;
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [config, setConfig] = useState<ClickHouseConfig>({
-    url: 'http://localhost:8123',
-    username: '',
-    password: '',
-    database: 'default',
+    url: defaultUrl,
+    username: defaultUsername,
+    password: defaultPassword,
+    database: defaultDatabase,
     project: ''
   });
   const [loading, setLoading] = useState(false);

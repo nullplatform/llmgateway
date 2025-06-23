@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { ClickHouseConfig, ConversationRecord, TokenConsumptionData, ConversationSummary } from '../types';
-
-const API_BASE_URL = 'http://localhost:3001/api';
+// @ts-ignore
+console.log('ClickHouseService initialized with API base URL:', import.meta.env.API_BASE_URL);
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 export class ClickHouseService {
   private config: ClickHouseConfig;
