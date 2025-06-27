@@ -1,6 +1,6 @@
 {
   "name": "@nullplatform/llm-gateway",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "LLM Gateway Core - Main proxy server",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -23,7 +23,7 @@
     "test:ci": "jest --ci --coverage --watchAll=false"
   },
   "dependencies": {
-    "@nullplatform/llm-gateway-sdk": "^1.1.1",
+    "@nullplatform/llm-gateway-sdk": "^1.1.0",
     "axios": "^1.6.0",
     "commander": "^14.0.0",
     "cors": "^2.8.0",
