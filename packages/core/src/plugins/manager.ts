@@ -47,7 +47,7 @@ export class PluginManager {
             try {
                 await this.loadPlugin(pluginConfig);
             } catch (error) {
-                this.logger.error(`Failed to load plugin ${pluginConfig.name}`, { error });
+                this.logger.error(`Failed to load plugin ${pluginConfig.name} ${error}`, { error });
                 throw error;
             }
         }
