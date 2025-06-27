@@ -1,4 +1,4 @@
-import {IPlugin, PluginMetadata, IRequestContext, IPluginResult, IMessage} from '@nullplatform/llm-gateway-sdk';
+import {IPlugin, ExtensionMetadata, IRequestContext, IPluginResult, IMessage} from '@nullplatform/llm-gateway-sdk';
 
 export enum PromptInjectionMode {
     OVERRIDE = 'override',
@@ -18,7 +18,7 @@ export class PromptManagerPluginConfig {
     experiment?: IExperimentConfig;
 }
 
-@PluginMetadata({
+@ExtensionMetadata({
     name: 'prompt-manager',
     version: '1.0.0',
     description: 'A plugin for managing and routing prompts with different injection modes and A/B testing support',

@@ -23,11 +23,15 @@ export interface OpenAIProviderConfig {
 
 export class OpenAIProvider implements IProvider {
     readonly name = 'openai';
-    readonly config: OpenAIProviderConfig;
+    private config: OpenAIProviderConfig;
     private client: AxiosInstance;
-    private logger: Logger;
+    protected logger: Logger;
 
-    constructor(config: OpenAIProviderConfig, logger: Logger) {
+    constructor(logger: Logger) {
+        this.logger = logger;
+    }
+
+    configure(config: OpenAIProviderConfig): Promise<void> {
         this.config = {
             baseUrl: config.baseUrl || 'https://api.openai.com/v1',
             retryAttempts: config.retryAttempts || 3,
@@ -36,18 +40,25 @@ export class OpenAIProvider implements IProvider {
         };
 
 
-        this.logger = logger;
+        const headers = {
+            'Content-Type': 'application/json',
+            'User-Agent': 'llm-gateway/1.0.0',
+        }
 
+        if(this.config.apiKey) {
+            headers['Authorization'] = `Bearer ${this.config.apiKey}`;
+        }
         this.client = axios.create({
             baseURL: this.config.baseUrl,
-            headers: {
-                'Authorization': `Bearer ${this.config.apiKey}`,
-                'Content-Type': 'application/json',
-                'User-Agent': 'llm-gateway/1.0.0',
-            }
+            headers
         });
-
         this.setupInterceptors();
+        return;
+    }
+
+
+    getHttpClient(): AxiosInstance {
+        return this.client;
     }
 
 
@@ -338,11 +349,3 @@ export class OpenAIProvider implements IProvider {
     }
 }
 
-export class OpenAIProviderFactory implements IProviderFactory<OpenAIProviderConfig> {
-    readonly name = 'OpenAI Provider Factory';
-    readonly type = 'openai';
-
-    create(config: OpenAIProviderConfig, logger?: Logger): IProvider<OpenAIProviderConfig> {
-        return new OpenAIProvider(config, logger || new Logger());
-    }
-}

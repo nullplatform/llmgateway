@@ -1,4 +1,4 @@
-import {IPlugin, PluginMetadata, IPluginMetadata, IRequestContext, IPluginResult} from '@nullplatform/llm-gateway-sdk';
+import {IPlugin, ExtensionMetadata, IRequestContext, IPluginResult} from '@nullplatform/llm-gateway-sdk';
 
 export interface RegexPatternConfig {
     pattern: string; // The regex pattern
@@ -33,7 +33,7 @@ interface BufferState {
     context: IRequestContext;
 }
 
-@PluginMetadata({
+@ExtensionMetadata({
     name: 'regex-hider',
     version: '1.0.0',
     description: 'A plugin to search regex patterns and hide them, useful for sensitive data masking',

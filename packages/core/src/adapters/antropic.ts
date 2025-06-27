@@ -1,4 +1,5 @@
 import {
+    ExtensionMetadata,
     IHTTPRequest,
     IHTTPResponse,
     ILLMApiAdapter,
@@ -6,7 +7,7 @@ import {
     ILLMResponse,
     INativeAdapter,
     ITool
-} from '@llm-gateway/sdk';
+} from '@nullplatform/llm-gateway-sdk';
 
 export interface AnthropicRequest {
     model: string;
@@ -72,12 +73,22 @@ interface StreamingState {
     lastToolCallId?: string;
     finishReason?: string;
 }
-
+@ExtensionMetadata({
+    name: 'anthropic',
+    description: 'Anthropic API adapter for LLM Gateway',
+})
 export class AnthropicApiAdapter implements ILLMApiAdapter<AnthropicRequest, AnthropicResponse> {
+
+
 
     readonly name = 'anthropic';
     readonly basePaths = ['/v1/messages', '/messages'];
     private streamingStateMap = new Map<string, StreamingState>();
+
+    configure(config: any): Promise<void> {
+        //Do nothing for now, as no configuration is needed
+        return;
+    }
 
     async transformInput(request: AnthropicRequest): Promise<ILLMRequest> {
         // Validate required fields

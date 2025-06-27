@@ -1,10 +1,10 @@
-import {IPlugin, PluginMetadata,IPluginMetadata, IRequestContext, IPluginResult} from '@nullplatform/llm-gateway-sdk';
+import {IPlugin, ExtensionMetadata,IExtensionMetadata, IRequestContext, IPluginResult} from '@nullplatform/llm-gateway-sdk';
 
 export class BasicApiKeyAuthPluginConfig {
     apikeys: string[]; // List of valid API keys
 }
 
-@PluginMetadata({
+@ExtensionMetadata({
     name: 'basic-apikey-auth',
     version: '1.0.0',
     description: 'A plugin for logging requests and responses',

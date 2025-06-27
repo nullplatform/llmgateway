@@ -274,7 +274,36 @@ This metadata is useful for:
 
 ## Known Plugins
 
+### Langsmith Tracer
+
+[Langsmith Tracer](https://github.com/llmgatewayai/langsmith-tracer) a comprehensive tracing plugin that sends conversation data to [LangSmith](https://smith.langchain.com) for observability, debugging, and performance monitoring.
+
+#### Install
+
+```bash
+npm i -g @llmgatewayai/langsmith-tracer 
+```
+
+#### Basic Configuration
+
+```yaml
+
+availableExtensions:
+  - module: "@llmgatewayai/langsmith-tracer"
+    
+plugins:
+  - name: langsmith-tracer-default
+    type: langsmith-tracer
+    config:
+      apiKey: "${LANGSMITH_API_KEY}"
+      projectName: "my-llm-gateway"
+```
+
+
+
 ### ClickHouse Tracer
+
+[ClickHouse Tracer](https://github.com/nullplatform/llmgateway/tree/main/packages/plugins/clickhouse-tracer) enables tracing and monitoring of LLM requests using ClickHouse as the backend for storing traces.
 
 #### Install using npm:
 
@@ -283,7 +312,7 @@ npm install -g @nullplatform/llm-gateway-clickhouse-tracer-plugin
 ```
 
 ```yaml
-availablePlugins:
+availableExtensions:
   - module: "@nullplatform/llm-gateway-clickhouse-tracer-plugin"
     
 plugins:
@@ -455,13 +484,13 @@ interface IRequestContext {
 
 1. **External Plugin**: Install as npm package and reference in config
 ```yaml
-availablePlugins:
+availableExtensions:
   - module: "@my-org/my-plugin"
 ```
 
 2. **Local Plugin**: Build and reference local file
 ```yaml
-availablePlugins:
+availableExtensions:
   - path: "./plugins/my-plugin/dist/index.js"
 ```
 ## 📖 Advanced Configuration
@@ -530,14 +559,11 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.
 
-## Kown missings
-
-- [ ] Adapters added via plugins
-- [ ] Providers added via plugins
+## Known missing
 - [ ] Plugin configuration validation using JSON Schema
-- [ ] Plugin metadata for documentation generation
+
 
 
 ## 🆘 Support

@@ -1,11 +1,11 @@
-import {IPlugin, PluginMetadata,IPluginMetadata, IRequestContext, IPluginResult} from '@nullplatform/llm-gateway-sdk';
+import {IPlugin, ExtensionMetadata, IRequestContext, IPluginResult} from '@nullplatform/llm-gateway-sdk';
 
 export class LoggerPluginConfig {
     level: string; // e.g., 'info', 'debug', 'error'
     pepe: number
 }
 
-@PluginMetadata({
+@ExtensionMetadata({
     name: 'logger',
     version: '1.0.0',
     description: 'A plugin for logging requests and responses'

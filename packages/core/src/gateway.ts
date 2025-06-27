@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { PluginManager } from './plugins/manager';
 import {ConfigLoader} from './config/loader';
 import { Logger } from './utils/logger.js';
-import { LLMApiAdapterRegistry } from './adapters/registry.js';
+import { LLMApiAdaptersFactory } from './adapters/factory';
 import { ModelRegistry } from './models/modelRegistry.js';
 import { ProviderRegistry } from './providers/providerRegistry.js';
 import {
@@ -13,18 +13,20 @@ import {
     INativeAdapter,
     IPluginPhaseExecution,
     IRequestContext,
-    IToolCall, LLMModelError
+    LLMModelError
 } from '@nullplatform/llm-gateway-sdk';
 import {ILLMApiAdapter} from "@nullplatform/llm-gateway-sdk";
 import {GatewayConfig} from "./config/gatewayConfig";
 import {PluginFactory} from "./plugins/factory";
+import {ExtensionsLoader} from "./extensions/extentionsLoader";
+import {LLMApiAdaptersManager} from "./adapters/manager";
 export interface ProjectRuntime {
     name: string;
     isDefault?: boolean;
     description?: string;
     models: GatewayConfig['models'];
     pipelineManager: PluginManager;
-    llmApiAdapters: LLMApiAdapterRegistry;
+    llmApiAdapters: LLMApiAdaptersManager;
     modelRegistry: ModelRegistry;
 }
 export class GatewayServer {
@@ -104,9 +106,9 @@ export class GatewayServer {
         // OpenAI-compatible endpoint
         for (const [projectName, project] of Object.entries(this.projects)) {
             const projectPath = project.isDefault ? '' : `/${projectName}`;
+            const adapters = project.llmApiAdapters.getAdapters();
 
-            for (const adapterName of project.llmApiAdapters.getAvailableAdapters()) {
-                const adapter = project.llmApiAdapters.get(adapterName);
+            for (const [adapterName, adapter] of adapters) {
                 for (const basePath of adapter.basePaths) {
                     this.app.post(`${projectPath}/${adapterName}${basePath}`, this.handleLLMRequest(adapter, project));
                 }
@@ -497,14 +499,19 @@ export class GatewayServer {
         this.logger = new Logger(this.config?.logging?.level);
 
         this.maxRetries = Math.max(this.config.maxRetries || 3, 1);
-        this.pluginFactory = new PluginFactory(this.config.availablePlugins, this.logger);
+        const extensionsLoader = new ExtensionsLoader(this.config.availableExtensions, this.logger);
+        await extensionsLoader.initializeExtensions();
+        const adaptersFactory = new LLMApiAdaptersFactory(extensionsLoader.getAdapterBuilders(), this.logger);
+        await adaptersFactory.initializeAdapters();
+        this.pluginFactory = new PluginFactory(extensionsLoader.getPluginBuilders(), this.logger);
         await this.pluginFactory.initializePlugins();
-        this.providersRegistry = new ProviderRegistry(this.config, this.logger)
+
+        this.providersRegistry = new ProviderRegistry(extensionsLoader.getProviderBuilders(), this.logger)
 
         if(this.config.defaultProject) {
             const pipelineManager = new PluginManager(this.config.plugins, this.pluginFactory, this.logger);
             await pipelineManager.loadPlugins();
-            const adapters = new LLMApiAdapterRegistry(this.logger);
+            const adapters = new LLMApiAdaptersManager(adaptersFactory,this.config.adapters, this.logger);
             await adapters.initializeAdapters();
             const modelRegistry = new ModelRegistry(this.providersRegistry, this.config.models, this.logger);
             await modelRegistry.initializeModels();
@@ -521,10 +528,11 @@ export class GatewayServer {
         }
         for(const projectConfig of this.config.projects || []) {
             const models = {...this.config.models, ...projectConfig.models};
+            const adaptersConfig = [...this.config.adapters, ...projectConfig.adapters];
             const plugins = [...this.config.plugins,...projectConfig.plugins];
             const pipelineManager = new PluginManager(plugins, this.pluginFactory, this.logger);
             await pipelineManager.loadPlugins();
-            const adapters = new LLMApiAdapterRegistry(this.logger);
+            const adapters = new LLMApiAdaptersManager(adaptersFactory,adaptersConfig, this.logger);
             await adapters.initializeAdapters();
             const modelRegistry = new ModelRegistry(this.providersRegistry, models, this.logger);
             await modelRegistry.initializeModels();

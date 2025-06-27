@@ -119,6 +119,13 @@ export class ConfigLoader {
             modelConfig: Joi.object().optional(),
             metadata: Joi.object().optional()
         })).default([]);
+        const adaptersSchema = Joi.array().items(
+            Joi.object({
+                name: Joi.string().required(),
+                type: Joi.string().required(),
+                config: Joi.object({}).required()
+            })
+        ).default([]);
         const pluginsSchema = Joi.array().items(
             Joi.object({
                 name: Joi.string().required(),
@@ -135,6 +142,7 @@ export class ConfigLoader {
                 }).optional()
             })
         ).default([]);
+
         return Joi.object({
             server: Joi.object({
                 host: Joi.string().default('0.0.0.0'),
@@ -144,15 +152,17 @@ export class ConfigLoader {
                     origins: Joi.array().items(Joi.string()).default(['*'])
                 }).optional()
             }).required(),
+            adapters: adaptersSchema.default([{name:"openai",type:"openai"},{"name":"anthropic",type:"anthropic"}]),
             projects: Joi.array().items(
                 Joi.object({
                     name: Joi.string().required(),
                     description: Joi.string().optional(),
                     models: modelsSchema,
-                    plugins: pluginsSchema
+                    plugins: pluginsSchema,
+                    adapters: adaptersSchema
                 })
             ).default([]),
-            availablePlugins: Joi.array().items(
+            availableExtensions: Joi.array().items(
                 Joi.object({
                     path: Joi.string().optional(),
                     module: Joi.string().optional()
@@ -164,24 +174,6 @@ export class ConfigLoader {
 
             plugins: pluginsSchema,
 
-            routing: Joi.object({
-                strategy: Joi.string().valid('round_robin', 'least_latency', 'weighted').default('round_robin'),
-                model_mapping: Joi.object().pattern(
-                    Joi.string(),
-                    Joi.object({
-                        models: Joi.array().items(Joi.string()).required()
-                    })
-                ).optional(),
-                fallbacks: Joi.object().pattern(
-                    Joi.string(),
-                    Joi.array().items(Joi.string())
-                ).optional(),
-                weights: Joi.object().pattern(
-                    Joi.string(),
-                    Joi.number().min(0).max(100)
-                ).optional()
-            }).optional(),
-
             monitoring: Joi.object({
                 enabled: Joi.boolean().default(true),
                 metrics: Joi.array().items(Joi.string()).optional(),
@@ -192,12 +184,6 @@ export class ConfigLoader {
                 }).optional()
             }).optional(),
 
-            cache: Joi.object({
-                enabled: Joi.boolean().default(false),
-                provider: Joi.string().valid('memory', 'redis').default('memory'),
-                connection: Joi.string().optional(),
-                ttl: Joi.number().integer().min(60).default(3600)
-            }).optional(),
 
             logging: Joi.object({
                 level: Joi.string().valid('debug', 'info', 'warn', 'error').default('info'),

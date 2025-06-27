@@ -60,6 +60,9 @@ export class PluginManager {
             config.priority = 1000;
         }
         const plugin = this.pluginFactory.createPlugin(config.type)
+        if(!plugin) {
+            throw new Error(`Plugin type ${config.type} not found for plugin ${config.name}`);
+        }
         if(plugin.validateConfig) {
             await plugin.validateConfig(config.config);
         }

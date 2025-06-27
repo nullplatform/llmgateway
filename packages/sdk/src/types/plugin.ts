@@ -1,6 +1,7 @@
 // packages/sdk/basic-apikey-auth/types/plugin.ts
 
 import {IRequestContext} from './context.js';
+import {IConfigurableExtension} from "./extension";
 
 export interface IPluginConfig {
     name: string;
@@ -17,22 +18,7 @@ export interface IPluginConfig {
     };
 }
 
-export interface IPluginMetadata {
-    name: string;
-    version: string;
-    description?: string;
-    configurationSchema?: any; // JSON Schema for the plugin configuration
-    author?: string;
-    homepage?: string;
-    keywords?: string[];
-}
 
-export function PluginMetadata(metadata: IPluginMetadata) {
-    return function <T extends new (...args: any[]) => IPlugin>(constructor: T) {
-        (constructor as any).metadata = metadata;
-        return constructor;
-    };
-}
 export interface IPluginExecution {
     pluginName: string,
     result: IPluginResult,
@@ -43,7 +29,7 @@ export interface IPluginPhaseExecution {
     totalExecutionTime: number;
     executions: Array<IPluginExecution>;
 }
-export interface IPlugin {
+export interface IPlugin extends IConfigurableExtension {
 
     beforeModel?(llmRequest: IRequestContext): Promise<IPluginResult>;
 
@@ -55,9 +41,6 @@ export interface IPlugin {
 
     detachedAfterResponse?(llmRequest: IRequestContext): Promise<void>;
 
-    configure(config: any): Promise<void>;
-
-    validateConfig?(config: any): Promise<boolean | string>;
 }
 
 // Plugin execution result

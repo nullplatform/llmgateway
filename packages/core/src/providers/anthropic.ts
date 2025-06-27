@@ -1,9 +1,8 @@
 // packages/core/basic-apikey-auth/providers/anthropic.ts
 
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import {
     IProvider,
-    IProviderFactory,
     ILLMRequest,
     ILLMResponse,
     IUsage,
@@ -69,11 +68,17 @@ interface AnthropicResponse {
 
 export class AnthropicProvider implements IProvider {
     readonly name = 'anthropic';
-    readonly config: AnthropicProviderConfig;
+    private config: AnthropicProviderConfig;
     private client: AxiosInstance;
     private logger: Logger;
 
-    constructor(config: AnthropicProviderConfig, logger: Logger) {
+    constructor(logger: Logger) {
+        this.logger = logger;
+
+    }
+
+    configure(config: AnthropicProviderConfig): Promise<void> {
+
         this.config = {
             baseUrl: config.baseUrl || 'https://api.anthropic.com',
             version: config.version || '2023-06-01',
@@ -83,7 +88,6 @@ export class AnthropicProvider implements IProvider {
             ...config
         };
 
-        this.logger = logger;
 
         this.client = axios.create({
             baseURL: this.config.baseUrl,
@@ -96,6 +100,7 @@ export class AnthropicProvider implements IProvider {
         });
 
         this.setupInterceptors();
+        return;
     }
 
     private setupInterceptors(): void {
@@ -534,14 +539,5 @@ export class AnthropicProvider implements IProvider {
 
     private sleep(ms: number): Promise<void> {
         return new Promise(resolve => setTimeout(resolve, ms));
-    }
-}
-
-export class AnthropicProviderFactory implements IProviderFactory<AnthropicProviderConfig> {
-    readonly name = 'Anthropic Provider Factory';
-    readonly type = 'anthropic';
-
-    create(config: AnthropicProviderConfig, logger?: Logger): IProvider<AnthropicProviderConfig> {
-        return new AnthropicProvider(config, logger || new Logger());
     }
 }

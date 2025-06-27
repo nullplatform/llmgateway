@@ -8,7 +8,7 @@ server:
     enabled: true
     origins: ["*"]
 
-availablePlugins:
+availableExtensions:
   - path: "../plugins/logger/dist/index.js"
   - module: "@nullplatform/llm-gateway-clickhouse-tracer-plugin"
 
@@ -17,7 +17,7 @@ availablePlugins:
 models:
   # GPT-4 model with OpenAI provider
   - name: gpt
-    isDefault: true
+    isDefault: false
     description: "OpenAI models"
     provider:
       type: "openai"
@@ -27,14 +27,8 @@ models:
         timeout: 30000
         retryAttempts: 3
         model: gpt-4.1-mini
-    modelConfig:
-      maxTokens: 4096
-      temperature: 0.7
-    metadata:
-      category: "large-language-model"
-      cost_tier: "high"
   - name: claude
-    isDefault: false
+    isDefault: true
     description: "Anthropic Claude models"
     provider:
       type: "anthropic"
@@ -43,12 +37,7 @@ models:
         timeout: 30000
         retryAttempts: 3
         model: claude-sonnet-4-20250514
-    modelConfig:
-      maxTokens: 4096
-      temperature: 0.7
-    metadata:
-      category: "large-language-model"
-      cost_tier: "high"
+
   - name: gpt2
     isDefault: false
     description: "Bad model"
@@ -60,22 +49,6 @@ models:
         retryAttempts: 1
         model: gpt-4.1-mini
 
-  - name: claude
-    isDefault: false
-    description: "Anthropic Claude models"
-    provider:
-      type: "anthropic"
-      config:
-        apiKey: "${ANTHROPIC_API_KEY}"
-        timeout: 30000
-        retryAttempts: 3
-        model: claude-sonnet-4-20250514
-    modelConfig:
-      maxTokens: 4096
-      temperature: 0.7
-    metadata:
-      category: "large-language-model"
-      cost_tier: "high"
 
 projects:
   - name: "colo"
@@ -117,6 +90,7 @@ plugins:
         - pattern: "[a-zA-Z0-9_.+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z0-9.]+"  # Email address"
           replacement: "[REDACTED|PII]"
           applyTo: response
+
   - name: clickhouse-tracer
     type: clickhouse-tracer
     priority: 100

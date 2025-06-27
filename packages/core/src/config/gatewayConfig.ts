@@ -1,4 +1,4 @@
-import {LLMApiAdapterRegistry} from "../adapters/registry";
+import {LLMApiAdaptersFactory} from "../adapters/factory";
 import {IPluginConfig} from "@nullplatform/llm-gateway-sdk";
 
 export interface ProviderConfig {
@@ -18,11 +18,17 @@ export interface ModelConfig {
     modelConfig?: Record<string, any>;
     metadata?: Record<string, any>;
 }
+export interface IAdapterConfig {
+    name: string;
+    type: string;
+    config: Record<string, any>;
+}
 export interface PorjectConfig {
     name: string;
     description?: string;
     models: Record<string, ModelConfig>;
     plugins: Array<IPluginConfig>;
+    adapters: Array<IAdapterConfig>;
 
 }
 export interface GatewayConfig {
@@ -36,12 +42,13 @@ export interface GatewayConfig {
     };
     maxRetries?: number;
     defaultProject?: boolean;
-    availablePlugins: Array<{
+    availableExtensions: Array<{
         path?: string;
         module?: string;
     }>;
     models: Record<string, ModelConfig>;
     plugins: Array<IPluginConfig>;
+    adapters: Array<IAdapterConfig>;
     projects: Array<PorjectConfig>;
     monitoring?: {
         enabled: boolean;

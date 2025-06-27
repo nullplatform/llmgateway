@@ -1,11 +1,11 @@
-import {IPlugin, PluginMetadata, IRequestContext, IPluginResult} from '@nullplatform/llm-gateway-sdk';
+import {IPlugin, ExtensionMetadata, IRequestContext, IPluginResult} from '@nullplatform/llm-gateway-sdk';
 
 export class ModelRoutingPluginConfig {
     model: string; //simply select
     fallbacks: Array<string>; //If primary model fails continue with them, if no model is selected fallbacks will be used as list of models
 }
 
-@PluginMetadata({
+@ExtensionMetadata({
     name: 'model-router',
     version: '1.0.0',
     description: 'A plugin for routing between models'

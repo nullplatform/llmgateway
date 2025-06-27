@@ -1,9 +1,7 @@
 import {
     IPlugin,
-    PluginMetadata,
-    IPluginMetadata,
     IRequestContext,
-    IPluginResult, IContent, ILLMRequest, ILLMResponse, IMessage
+    ILLMRequest, ILLMResponse, IMessage, ExtensionMetadata
 } from '@nullplatform/llm-gateway-sdk';
 import {ClickHouseClient, createClient} from '@clickhouse/client';
 import {ConfigSchema} from "./configSchema";
@@ -66,7 +64,7 @@ interface ConversationRecord {
     system_fingerprint?: string;
 }
 
-@PluginMetadata({
+@ExtensionMetadata({
     name: 'clickhouse-tracer',
     version: '1.0.0',
     description: 'Stores conversation data in ClickHouse with tool sequence buffering and detailed metrics',

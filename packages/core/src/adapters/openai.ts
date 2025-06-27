@@ -1,4 +1,5 @@
 import {
+    ExtensionMetadata,
     IHTTPRequest,
     IHTTPResponse,
     ILLMApiAdapter,
@@ -6,8 +7,7 @@ import {
     ILLMResponse,
     INativeAdapter,
     ITool
-} from '@llm-gateway/sdk';
-import {request} from "express";
+} from '@nullplatform/llm-gateway-sdk';
 
 export interface OpenAIRequest {
     model: string;
@@ -103,10 +103,21 @@ export interface OpenAIResponse {
 }
 
 
+@ExtensionMetadata({
+    name: 'openai',
+    description: 'OpenAI API adapter for LLM Gateway',
+})
 export class OpenAIApiAdapter implements ILLMApiAdapter<OpenAIRequest, OpenAIResponse> {
+
 
     readonly name = 'openai';
     readonly basePaths = ['/v1/chat/completions','/chat/completions'];
+
+    configure(config: any): Promise<void> {
+       //Do Nothing
+       return;
+    }
+
     async transformInput(request: OpenAIRequest): Promise<ILLMRequest> {
         // Validate required fields
         if (!request.model) {

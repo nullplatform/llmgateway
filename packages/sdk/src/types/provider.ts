@@ -2,8 +2,8 @@
 
 import { ILLMRequest, ILLMResponse } from './request.js';
 import {IHTTPRequest, IHTTPResponse} from "./context.js";
-import {OpenAIRequest} from "@nullplatform/llm-gateway-core/dist/adapters/openai";
-import {IPluginPhaseExecution} from "@llm-gateway/sdk";
+import {IPluginPhaseExecution} from "./plugin.js";
+import {IConfigurableExtension} from "./extension";
 
 export interface IChunkEmitter {
     onData(chunk: ILLMResponse, finalChunk: boolean): Promise<IPluginPhaseExecution | undefined>;
@@ -20,9 +20,8 @@ export class LLMModelError extends Error {
     }
 }
 
-export interface IProvider<ConfigType = any> {
+export interface IProvider<ConfigType = any> extends IConfigurableExtension{
     readonly name: string;
-    readonly config: ConfigType;
 
     execute(request: ILLMRequest): Promise<ILLMResponse>;
     executeStreaming(request: ILLMRequest, chunkEmitter: IChunkEmitter): Promise<IPluginPhaseExecution | void>;
@@ -40,7 +39,7 @@ export interface IModel {
 
 export interface IProviderFactory<ConfigType = any> {
     readonly name: string;
-    readonly type: string;
+    readonly type?: string;
     create(config: ConfigType, logger?: any): IProvider<ConfigType>;
 }
 
@@ -50,7 +49,7 @@ export interface INativeAdapter {
     doRequest(request: IHTTPRequest, response: IHTTPResponse): Promise<void>;
 }
 
-export interface ILLMApiAdapter<TInput = any, TOutput = any> {
+export interface ILLMApiAdapter<TInput = any, TOutput = any> extends IConfigurableExtension{
     readonly name: string;
     readonly basePaths: Array<string>;
     // Receives the input in native api format and returns a processed request object
@@ -64,12 +63,6 @@ export interface ILLMApiAdapter<TInput = any, TOutput = any> {
     getNativeAdapters?(): Promise<Array<INativeAdapter>>;
 }
 
-export interface IProviderRegistry {
-    registerFactory(factory: IProviderFactory): void;
-    getFactory(type: string): IProviderFactory | undefined;
-    listFactories(): IProviderFactory[];
-    createProvider(type: string, config: any, logger?: any): IProvider;
-}
 
 export interface IModelRegistry {
     register(model: IModel): void;

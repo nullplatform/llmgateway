@@ -47,7 +47,7 @@ export class ModelRegistry implements IModelRegistry {
     private async createAndRegisterModel(config: ModelConfig): Promise<void> {
         try {
             // Create provider instance for this model
-            const provider = this.providerRegistry.createProvider(
+            const provider = await this.providerRegistry.createProvider(
                 config.provider.type,
                 config.provider.config,
                 this.logger
@@ -112,62 +112,6 @@ export class ModelRegistry implements IModelRegistry {
     getAvailableModels(): string[] {
         return Array.from(this.models.keys());
     }
-
-    // Get model statistics
-    getModelStats(): Record<string, any> {
-        const stats: Record<string, any> = {};
-
-        for (const [id, model] of this.models) {
-            stats[id] = {
-                name: model.name,
-                description: model.description,
-                providerType: model.provider.name,
-                providerConfig: {
-                    baseUrl: model.provider.config.baseUrl,
-                    timeout: model.provider.config.timeout,
-                    retryAttempts: model.provider.config.retryAttempts
-                },
-                modelConfig: model.modelConfig,
-                metadata: model.metadata
-            };
-        }
-
-        return stats;
-    }
-
-    // Round-robin model selection
-    private roundRobinIndex = 0;
-
-    getRoundRobinModel(): IModel | undefined {
-        const models = this.list();
-        if (models.length === 0) return undefined;
-
-        const model = models[this.roundRobinIndex];
-        this.roundRobinIndex = (this.roundRobinIndex + 1) % models.length;
-
-        return model;
-    }
-
-    // Get models by criteria
-    getModelsByCriteria(criteria: {
-        providerType?: string;
-        metadata?: Record<string, any>;
-    }): IModel[] {
-        return this.list().filter(model => {
-            if (criteria.providerType && model.provider.name !== criteria.providerType) {
-                return false;
-            }
-
-            if (criteria.metadata) {
-                for (const [key, value] of Object.entries(criteria.metadata)) {
-                    if (!model.metadata || model.metadata[key] !== value) {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
-        });
-    }
+    
 
 }
