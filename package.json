@@ -1,6 +1,6 @@
 {
   "name": "@nullplatform/llm-gateway-monorepo",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Language Model Gateway - Agnostic proxy for LLM APIs",
   "private": true,
   "workspaces": [
@@ -40,7 +40,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/nullplatform/llm-gateway"
+    "url": "https://github.com/nullplatform/llmgateway"
   },
   "license": "MIT",
   "dependencies": {

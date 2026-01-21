@@ -1,4 +1,4 @@
-import {IPlugin, ExtensionMetadata, IRequestContext, IPluginResult} from '@nullplatform/llm-gateway-sdk';
+import {ILLMPlugin, ExtensionMetadata, IRequestContext, ILLMPluginResult} from '@nullplatform/llm-gateway-sdk';
 
 export class LoggerPluginConfig {
     level: string; // e.g., 'info', 'debug', 'error'
@@ -10,12 +10,12 @@ export class LoggerPluginConfig {
     version: '1.0.0',
     description: 'A plugin for logging requests and responses'
 })
-export class LoggerPlugin implements IPlugin {
+export class LoggerPlugin implements ILLMPlugin {
     async configure(config: LoggerPluginConfig): Promise<void> {
 
     }
 
-    async beforeModel(llmRequest: IRequestContext): Promise<IPluginResult> {
+    async beforeModel(llmRequest: IRequestContext): Promise<ILLMPluginResult> {
         // Log the request details
         console.log('Before Model:', llmRequest);
 

@@ -1,5 +1,5 @@
 import {
-    IPlugin,
+    ILLMPlugin,
     IRequestContext,
     ILLMRequest, ILLMResponse, IMessage, ExtensionMetadata
 } from '@nullplatform/llm-gateway-sdk';
@@ -70,7 +70,7 @@ interface ConversationRecord {
     description: 'Stores conversation data in ClickHouse with tool sequence buffering and detailed metrics',
     configurationSchema: ConfigSchema
 })
-export class ClickhouseTracerPlugin implements IPlugin {
+export class ClickhouseTracerPlugin implements ILLMPlugin {
     private config!: ClickHouseConversationPluginConfig;
     private clickhouse!: ClickHouseClient;
     private pendingRecords: ConversationRecord[] = [];

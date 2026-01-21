@@ -1,4 +1,4 @@
-import {IPlugin, ExtensionMetadata, IRequestContext, IPluginResult} from '@nullplatform/llm-gateway-sdk';
+import {ILLMPlugin, ExtensionMetadata, IRequestContext, ILLMPluginResult} from '@nullplatform/llm-gateway-sdk';
 
 export interface RegexPatternConfig {
     pattern: string; // The regex pattern
@@ -38,7 +38,7 @@ interface BufferState {
     version: '1.0.0',
     description: 'A plugin to search regex patterns and hide them, useful for sensitive data masking',
 })
-export class RegexHiderPlugin implements IPlugin {
+export class RegexHiderPlugin implements ILLMPlugin {
     private config!: RegexHiderPluginConfig;
     private requestPatterns: CompiledPattern[] = [];
     private responsePatterns: CompiledPattern[] = [];
@@ -118,7 +118,7 @@ export class RegexHiderPlugin implements IPlugin {
         }
     }
 
-    async beforeModel(context: IRequestContext): Promise<IPluginResult> {
+    async beforeModel(context: IRequestContext): Promise<ILLMPluginResult> {
         if (this.requestPatterns.length === 0) {
             return { success: true };
         }
@@ -158,7 +158,7 @@ export class RegexHiderPlugin implements IPlugin {
             };
         }
     }
-    async afterChunk(context: IRequestContext): Promise<IPluginResult> {
+    async afterChunk(context: IRequestContext): Promise<ILLMPluginResult> {
         try {
             const chunkContent = this.extractChunkContent(context.bufferedChunk!);
             // Determine if we should flush
@@ -213,7 +213,7 @@ export class RegexHiderPlugin implements IPlugin {
             };
         }
     }
-    async afterModel(context: IRequestContext): Promise<IPluginResult> {
+    async afterModel(context: IRequestContext): Promise<ILLMPluginResult> {
         if (this.responsePatterns.length === 0 || !context.request.stream) {
             // For non-streaming responses, process immediately
             return this.processNonStreamingResponse(context);
@@ -223,7 +223,7 @@ export class RegexHiderPlugin implements IPlugin {
         return { success: true };
     }
 
-    private async processNonStreamingResponse(context: IRequestContext): Promise<IPluginResult> {
+    private async processNonStreamingResponse(context: IRequestContext): Promise<ILLMPluginResult> {
         if (!context.response || this.responsePatterns.length === 0) {
             return { success: true };
         }

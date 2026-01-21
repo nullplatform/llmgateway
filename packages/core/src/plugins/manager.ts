@@ -3,12 +3,12 @@
 import * as path from 'path';
 
 import {
-    IPlugin,
+    ILLMPlugin,
     IPluginConfig,
-    IPluginResult,
+    ILLMPluginResult,
     IRequestContext,
-    IPluginPhaseExecution,
-    IPluginExecution
+    ILLMPluginPhaseExecution,
+    ILLMPluginExecution
 } from '@nullplatform/llm-gateway-sdk';
 import { Logger } from '../utils/logger.js';
 import {GatewayConfig} from "../config/gatewayConfig";
@@ -16,7 +16,7 @@ import {PluginFactory} from "./factory";
 
 
 export class PluginManager {
-    private plugins: Array<{name: string, plugin: IPlugin, config: IPluginConfig}> = [];
+    private plugins: Array<{name: string, plugin: ILLMPlugin, config: IPluginConfig}> = [];
     private config: GatewayConfig['plugins'];
     private pluginFactory: PluginFactory;
     private logger: Logger;
@@ -70,11 +70,11 @@ export class PluginManager {
         this.plugins.push({name: config.name, plugin, config});
     }
 
-    async executePluginFunction(llmRequest: IRequestContext, pluginFunction: string, reverseOrder: boolean = false, isDettachedRun: boolean = false ): Promise<void | IPluginPhaseExecution> {
+    async executePluginFunction(llmRequest: IRequestContext, pluginFunction: string, reverseOrder: boolean = false, isDettachedRun: boolean = false ): Promise<void | ILLMPluginPhaseExecution> {
         let request = llmRequest;
-        let lastExecution: IPluginResult;
+        let lastExecution: ILLMPluginResult;
         let startTime = Date.now();
-        const executions: Array<IPluginExecution> = [];
+        const executions: Array<ILLMPluginExecution> = [];
         for (const {plugin, config} of (reverseOrder ? this.plugins.slice().reverse() : this.plugins)) {
             if (typeof plugin[pluginFunction] === 'function') {
                 let executionStart = Date.now();
@@ -85,7 +85,7 @@ export class PluginManager {
                 }
                 try {
 
-                    const result: IPluginResult = await plugin[pluginFunction](request);
+                    const result: ILLMPluginResult = await plugin[pluginFunction](request);
                     if(result) {
                         result.pluginName = config?.name;
                     }
@@ -133,20 +133,20 @@ export class PluginManager {
         };
     }
 
-    async beforeModel(llmRequest: IRequestContext): Promise<IPluginPhaseExecution> {
-        return await this.executePluginFunction(llmRequest, 'beforeModel') as IPluginPhaseExecution;
+    async beforeModel(llmRequest: IRequestContext): Promise<ILLMPluginPhaseExecution> {
+        return await this.executePluginFunction(llmRequest, 'beforeModel') as ILLMPluginPhaseExecution;
     }
 
-    async afterModel(llmRequest: IRequestContext): Promise<IPluginPhaseExecution> {
-        return await this.executePluginFunction(llmRequest, 'afterModel', true) as IPluginPhaseExecution;
+    async afterModel(llmRequest: IRequestContext): Promise<ILLMPluginPhaseExecution> {
+        return await this.executePluginFunction(llmRequest, 'afterModel', true) as ILLMPluginPhaseExecution;
     }
 
-    async afterChunk(llmRequest: IRequestContext) : Promise<IPluginPhaseExecution> {
-        return await this.executePluginFunction(llmRequest, 'afterChunk', true) as IPluginPhaseExecution;
+    async afterChunk(llmRequest: IRequestContext) : Promise<ILLMPluginPhaseExecution> {
+        return await this.executePluginFunction(llmRequest, 'afterChunk', true) as ILLMPluginPhaseExecution;
     }
 
-    async onModelError(llmRequest: IRequestContext) : Promise<IPluginPhaseExecution> {
-        return await this.executePluginFunction(llmRequest, 'onModelError', false) as IPluginPhaseExecution;
+    async onModelError(llmRequest: IRequestContext) : Promise<ILLMPluginPhaseExecution> {
+        return await this.executePluginFunction(llmRequest, 'onModelError', false) as ILLMPluginPhaseExecution;
     }
 
     async detachedAfterResponse(llmRequest: IRequestContext) : Promise<void> {

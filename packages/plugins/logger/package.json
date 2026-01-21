@@ -1,6 +1,6 @@
 {
   "name": "@nullplatform/llm-gateway-logger-plugin",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "LLM Gateway - Logger Plugin",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -16,7 +16,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@nullplatform/llm-gateway-sdk": "^1.0.0"
+    "@nullplatform/llm-gateway-sdk": "^2.0.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.0",

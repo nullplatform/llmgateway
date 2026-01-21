@@ -340,10 +340,10 @@ plugins:
 
 ### Plugin Interface
 
-A plugin implements the `IPlugin` interface with lifecycle hooks:
+A plugin implements the `ILLMPlugin` interface with lifecycle hooks:
 
 ```typescript
-import { IPlugin, IRequestContext, IPluginResult, PluginMetadata } from '@nullplatform/llm-gateway-sdk';
+import { ILLMPlugin, IRequestContext, ILLMPluginResult, PluginMetadata } from '@nullplatform/llm-gateway-sdk';
 
 @PluginMetadata({
     name: 'my-custom-plugin',
@@ -357,7 +357,7 @@ import { IPlugin, IRequestContext, IPluginResult, PluginMetadata } from '@nullpl
         }
     }
 })
-export class MyCustomPlugin implements IPlugin {
+export class MyCustomPlugin implements ILLMPlugin {
     private config: any;
 
     async configure(config: any): Promise<void> {
@@ -369,22 +369,22 @@ export class MyCustomPlugin implements IPlugin {
         return true;
     }
 
-    async beforeModel(context: IRequestContext): Promise<IPluginResult> {
+    async beforeModel(context: IRequestContext): Promise<ILLMPluginResult> {
         // Execute before sending request to LLM
         return { success: true };
     }
 
-    async afterModel(context: IRequestContext): Promise<IPluginResult> {
+    async afterModel(context: IRequestContext): Promise<ILLMPluginResult> {
         // Execute after receiving response from LLM
         return { success: true };
     }
 
-    async afterChunk(context: IRequestContext): Promise<IPluginResult> {
+    async afterChunk(context: IRequestContext): Promise<ILLMPluginResult> {
         // Execute after each streaming chunk (streaming only)
         return { success: true };
     }
 
-    async onModelError(context: IRequestContext): Promise<IPluginResult> {
+    async onModelError(context: IRequestContext): Promise<ILLMPluginResult> {
         // Execute when LLM request fails
         return { success: true };
     }

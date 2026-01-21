@@ -2,11 +2,11 @@
 
 import { ILLMRequest, ILLMResponse } from './request.js';
 import {IHTTPRequest, IHTTPResponse} from "./context.js";
-import {IPluginPhaseExecution} from "./plugin.js";
+import {ILLMPluginPhaseExecution} from "./plugin.js";
 import {IConfigurableExtension} from "./extension";
 
 export interface IChunkEmitter {
-    onData(chunk: ILLMResponse, finalChunk: boolean): Promise<IPluginPhaseExecution | undefined>;
+    onData(chunk: ILLMResponse, finalChunk: boolean): Promise<ILLMPluginPhaseExecution | undefined>;
 }
 
 export class LLMModelError extends Error {
@@ -24,7 +24,7 @@ export interface IProvider<ConfigType = any> extends IConfigurableExtension{
     readonly name: string;
 
     execute(request: ILLMRequest): Promise<ILLMResponse>;
-    executeStreaming(request: ILLMRequest, chunkEmitter: IChunkEmitter): Promise<IPluginPhaseExecution | void>;
+    executeStreaming(request: ILLMRequest, chunkEmitter: IChunkEmitter): Promise<ILLMPluginPhaseExecution | void>;
 
 }
 

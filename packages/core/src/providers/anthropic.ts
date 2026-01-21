@@ -6,7 +6,7 @@ import {
     ILLMRequest,
     ILLMResponse,
     IUsage,
-    IMessage, IContent, IChunkEmitter, IPluginPhaseExecution, LLMModelError
+    IMessage, IContent, IChunkEmitter, ILLMPluginPhaseExecution, LLMModelError
 } from '@nullplatform/llm-gateway-sdk';
 import { Logger } from '../utils/logger.js';
 
@@ -304,9 +304,9 @@ export class AnthropicProvider implements IProvider {
         }
     }
 
-    async executeStreaming(request: ILLMRequest, chunkEmitter: IChunkEmitter): Promise<IPluginPhaseExecution | void> {
+    async executeStreaming(request: ILLMRequest, chunkEmitter: IChunkEmitter): Promise<ILLMPluginPhaseExecution | void> {
         const endpoint = '/v1/messages';
-        let lastPluginExecution: IPluginPhaseExecution;
+        let lastPluginExecution: ILLMPluginPhaseExecution;
         try {
             const anthropicRequest = this.transformToAnthropicRequest(request);
             // Enable streaming for Anthropic
@@ -364,7 +364,7 @@ export class AnthropicProvider implements IProvider {
             });
 
             // Wait for stream to complete
-            await new Promise<IPluginPhaseExecution | void>((resolve, reject) => {
+            await new Promise<ILLMPluginPhaseExecution | void>((resolve, reject) => {
                 response.data.on('end', () => { resolve(lastPluginExecution)});
                 response.data.on('error',() => { reject(lastPluginExecution)});
             });
@@ -383,7 +383,7 @@ export class AnthropicProvider implements IProvider {
         eventType: string | null,
         chunkEmitter: IChunkEmitter,
         lastChunk: boolean = false
-    ): Promise<IPluginPhaseExecution | undefined> {
+    ): Promise<ILLMPluginPhaseExecution | undefined> {
         if (!line.startsWith('data: ')) {
             return;
         }

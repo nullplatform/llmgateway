@@ -17,7 +17,7 @@ export interface IProvider extends IConfigurableExtension {
     readonly name: string;
     
     execute(request: ILLMRequest): Promise<ILLMResponse>;
-    executeStreaming(request: ILLMRequest, chunkEmitter: IChunkEmitter): Promise<IPluginPhaseExecution | void>;
+    executeStreaming(request: ILLMRequest, chunkEmitter: IChunkEmitter): Promise<ILLMPluginPhaseExecution | void>;
     configure(config: any): Promise<void>;
     validateConfig?(config: any): Promise<boolean | string>;
 }

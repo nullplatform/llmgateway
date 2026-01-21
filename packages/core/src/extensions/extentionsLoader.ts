@@ -1,7 +1,7 @@
 /**
  * This loader is responsible for loading extensions (plugins, providers, adapters) from config
  */
-import {ILLMApiAdapter, IPlugin, IProvider} from "@llm-gateway/sdk";
+import {ILLMApiAdapter, ILLMPlugin, IProvider} from "@llm-gateway/sdk";
 import {Logger} from "../utils/logger";
 import {GatewayConfig} from "../config/gatewayConfig";
 import path from "path";
@@ -11,7 +11,7 @@ import { existsSync, readFileSync, readdirSync } from "fs";
 
 export class ExtensionsLoader {
 
-    private plugins: Map<string, new (...args: any[]) => IPlugin> = new Map();
+    private plugins: Map<string, new (...args: any[]) => ILLMPlugin> = new Map();
     private adapters: Map<string, new (...args: any[]) => ILLMApiAdapter> = new Map();
     private providers: Map<string, new (...args: any[]) => IProvider> = new Map();
 
@@ -23,7 +23,7 @@ export class ExtensionsLoader {
         this.config = config;
     }
 
-    getPluginBuilders(): Map<string, new (...args: any[]) => IPlugin> {
+    getPluginBuilders(): Map<string, new (...args: any[]) => ILLMPlugin> {
         return this.plugins;
     }
     getAdapterBuilders(): Map<string, new (...args: any[]) => ILLMApiAdapter> {
@@ -47,7 +47,7 @@ export class ExtensionsLoader {
 
             try {
                 const extensionModule = await import(module);
-                const discoveredPlugins = await this.discoverAndRegisterExtensionType<IPlugin>("plugin",extensionModule,this.implementsIPlugin.bind(this));
+                const discoveredPlugins = await this.discoverAndRegisterExtensionType<ILLMPlugin>("plugin",extensionModule,this.implementsILLMPlugin.bind(this));
                 for (const [name, plugin] of discoveredPlugins) {
                     this.plugins.set(name, plugin);
                 }
@@ -226,7 +226,7 @@ export class ExtensionsLoader {
 
             // Check if it's a class constructor
             if (this.isConstructor(value)) {
-                // Check if it's not abstract and implements IPlugin
+                // Check if it's not abstract and implements ILLMPlugin
                 if (typeValidator(value) && !this.isAbstractClass(value)) {
                     try {
                         // Get plugin metadata - assuming it's a static property or method
@@ -285,7 +285,7 @@ export class ExtensionsLoader {
         );
     }
 
-    private implementsIPlugin(constructor: any): boolean {
+    private implementsILLMPlugin(constructor: any): boolean {
         const prototype = constructor.prototype;
         const metadata = constructor.metadata || prototype.metadata;
         return (

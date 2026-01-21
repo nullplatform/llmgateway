@@ -1,4 +1,4 @@
-import {IPlugin, ExtensionMetadata,IExtensionMetadata, IRequestContext, IPluginResult} from '@nullplatform/llm-gateway-sdk';
+import {ILLMPlugin, ExtensionMetadata,IExtensionMetadata, IRequestContext, ILLMPluginResult} from '@nullplatform/llm-gateway-sdk';
 
 export class BasicApiKeyAuthPluginConfig {
     apikeys: string[]; // List of valid API keys
@@ -27,7 +27,7 @@ export class BasicApiKeyAuthPluginConfig {
         "additionalProperties": false
     }
 })
-export class BasicApiKeyAuthPlugin implements IPlugin {
+export class BasicApiKeyAuthPlugin implements ILLMPlugin {
     private config: BasicApiKeyAuthPluginConfig;
     async configure(config: BasicApiKeyAuthPluginConfig): Promise<void> {
         this.config = config;
@@ -42,7 +42,7 @@ export class BasicApiKeyAuthPlugin implements IPlugin {
 
 
 
-    async beforeModel(llmRequest: IRequestContext): Promise<IPluginResult> {
+    async beforeModel(llmRequest: IRequestContext): Promise<ILLMPluginResult> {
         let apiKey = llmRequest.httpRequest.headers['authorization'] || llmRequest.httpRequest.headers['x-api-key'] || '';
         apiKey = apiKey.replace(/^Bearer\s+/i, '');
         if(this.config.apikeys.indexOf(apiKey) === -1) {

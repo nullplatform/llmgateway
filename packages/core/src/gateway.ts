@@ -11,7 +11,7 @@ import { ProviderRegistry } from './providers/providerRegistry.js';
 import {
     ILLMResponse, IModel,
     INativeAdapter,
-    IPluginPhaseExecution,
+    ILLMPluginPhaseExecution,
     IRequestContext,
     LLMModelError
 } from '@nullplatform/llm-gateway-sdk';
@@ -204,7 +204,7 @@ export class GatewayServer {
                         throw new Error(`Model '${targetModel}' not configured`);
                     }
 
-                    let pluginResultPost: void | IPluginPhaseExecution = undefined;
+                    let pluginResultPost: void | ILLMPluginPhaseExecution = undefined;
                     if (context.request.stream) {
                         pluginResultPost = await this.handleStreamingLLMRequest(context, model, adapter, targetModel, req, res, project);
 
@@ -321,13 +321,13 @@ export class GatewayServer {
         req: express.Request,
         res: express.Response,
         project: ProjectRuntime
-    ): Promise<IPluginPhaseExecution | void> {
+    ): Promise<ILLMPluginPhaseExecution | void> {
         let accumulatedResponse: ILLMResponse = undefined;
         let bufferedChunks: Array<ILLMResponse> = [];
         let bufferedChunk: ILLMResponse | undefined = undefined;
         let firstChunkEmitted = false;
         return await model.provider.executeStreaming(context.request, {
-            onData: async (chunk: ILLMResponse, finalChunk: boolean): Promise<IPluginPhaseExecution | undefined> => {
+            onData: async (chunk: ILLMResponse, finalChunk: boolean): Promise<ILLMPluginPhaseExecution | undefined> => {
                 try {
                     const internalContext: IRequestContext = {
                         ...context,
@@ -424,7 +424,7 @@ export class GatewayServer {
         req: express.Request,
         res: express.Response,
         project: ProjectRuntime
-    ): Promise<IPluginPhaseExecution | undefined> {
+    ): Promise<ILLMPluginPhaseExecution | undefined> {
         const providerResponse = await model.provider.execute(context.request);
 
         // Update context with response

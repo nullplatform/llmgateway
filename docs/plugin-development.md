@@ -14,16 +14,16 @@ Plugins in the LLM Gateway follow a lifecycle-based architecture where they can 
 
 ## Core Interface
 
-All plugins must implement the `IPlugin` interface, because all methods are optional if you have at least one, the class will be considered a plugin:
+All plugins must implement the `ILLMPlugin` interface, because all methods are optional if you have at least one, the class will be considered a plugin:
 
 ```typescript
-import { IPlugin, IRequestContext, IPluginResult, ExtensionMetadata } from '@llm-gateway/sdk';
+import { ILLMPlugin, IRequestContext, ILLMPluginResult, ExtensionMetadata } from '@llm-gateway/sdk';
 
-export interface IPlugin extends IConfigurableExtension {
-    beforeModel?(context: IRequestContext): Promise<IPluginResult>;
-    afterModel?(context: IRequestContext): Promise<IPluginResult>;
-    afterChunk?(context: IRequestContext): Promise<IPluginResult>;
-    onModelError?(context: IRequestContext): Promise<IPluginResult>;
+export interface ILLMPlugin extends IConfigurableExtension {
+    beforeModel?(context: IRequestContext): Promise<ILLMPluginResult>;
+    afterModel?(context: IRequestContext): Promise<ILLMPluginResult>;
+    afterChunk?(context: IRequestContext): Promise<ILLMPluginResult>;
+    onModelError?(context: IRequestContext): Promise<ILLMPluginResult>;
     detachedAfterResponse?(context: IRequestContext): Promise<void>;
 }
 ```
@@ -33,7 +33,7 @@ export interface IPlugin extends IConfigurableExtension {
 ### 1. Basic Plugin Structure
 
 ```typescript
-import { IPlugin, IRequestContext, IPluginResult, ExtensionMetadata } from '@llm-gateway/sdk';
+import { ILLMPlugin, IRequestContext, ILLMPluginResult, ExtensionMetadata } from '@llm-gateway/sdk';
 
 // Configuration interface for your plugin
 export interface MyPluginConfig {
@@ -56,7 +56,7 @@ export interface MyPluginConfig {
         required: ['customSetting']
     }
 })
-export class MyPlugin implements IPlugin {
+export class MyPlugin implements ILLMPlugin {
     private config: MyPluginConfig;
     
     async configure(config: MyPluginConfig): Promise<void> {
@@ -70,7 +70,7 @@ export class MyPlugin implements IPlugin {
         return true;
     }
     
-    async beforeModel(context: IRequestContext): Promise<IPluginResult> {
+    async beforeModel(context: IRequestContext): Promise<ILLMPluginResult> {
         // Your pre-processing logic here
         return { context };
     }
@@ -107,7 +107,7 @@ export interface PluginConfig {
     retryAttempts?: number;
 }
 
-export class MyPlugin implements IPlugin {
+export class MyPlugin implements ILLMPlugin {
     private config: PluginConfig;
     
     async configure(config: PluginConfig): Promise<void> {
@@ -148,7 +148,7 @@ export class MyPlugin implements IPlugin {
 Use this phase for request modification, authentication, validation, or routing:
 
 ```typescript
-async beforeModel(context: IRequestContext): Promise<IPluginResult> {
+async beforeModel(context: IRequestContext): Promise<ILLMPluginResult> {
     // Example: Add authentication headers
     if (!context.headers.authorization) {
         return {
@@ -182,7 +182,7 @@ async beforeModel(context: IRequestContext): Promise<IPluginResult> {
 Use this phase for response modification, logging, or analytics:
 
 ```typescript
-async afterModel(context: IRequestContext): Promise<IPluginResult> {
+async afterModel(context: IRequestContext): Promise<ILLMPluginResult> {
     // Example: Log usage metrics
     const usage = context.response?.usage;
     if (usage) {
@@ -214,7 +214,7 @@ Handle individual streaming chunks:
 In chunk you can also return as part of results `emitChunk: false` this will produce that the gateway buffer and merge the chunks in the following chunk you will receive a marged chunk with all past not flushed chunks plust the new, this behavior simplify the process of analize information across multiple chunks
 
 ```typescript
-async afterChunk(context: IRequestContext): Promise<IPluginResult> {
+async afterChunk(context: IRequestContext): Promise<ILLMPluginResult> {
     // Access current chunk
     const chunk = context.chunk;
     
@@ -240,7 +240,7 @@ async afterChunk(context: IRequestContext): Promise<IPluginResult> {
 Handle errors during model execution:
 
 ```typescript
-async onModelError(context: IRequestContext): Promise<IPluginResult> {
+async onModelError(context: IRequestContext): Promise<ILLMPluginResult> {
     const error = context.error;
     
     // Example: Fallback to different model
@@ -306,9 +306,9 @@ plugins:
       customSetting: "value"
 ```
 
-### IPluginResult Interface
+### ILLMPluginResult Interface
 ```
-export interface IPluginResult {
+export interface ILLMPluginResult {
     success: boolean; // Indicates if the plugin execution was successful
     status?: number; // HTTP status code for the response in case of error if ommited will be 500
     context?: IRequestContext; //The context to be used, it will be merged and passed to the following plugin

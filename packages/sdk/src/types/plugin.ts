@@ -19,32 +19,32 @@ export interface IPluginConfig {
 }
 
 
-export interface IPluginExecution {
+export interface ILLMPluginExecution {
     pluginName: string,
-    result: IPluginResult,
+    result: ILLMPluginResult,
     executionTime: number
 }
-export interface IPluginPhaseExecution {
-    finalResult: IPluginResult;
+export interface ILLMPluginPhaseExecution {
+    finalResult: ILLMPluginResult;
     totalExecutionTime: number;
-    executions: Array<IPluginExecution>;
+    executions: Array<ILLMPluginExecution>;
 }
-export interface IPlugin extends IConfigurableExtension {
+export interface ILLMPlugin extends IConfigurableExtension {
 
-    beforeModel?(llmRequest: IRequestContext): Promise<IPluginResult>;
+    beforeModel?(llmRequest: IRequestContext): Promise<ILLMPluginResult>;
 
-    onModelError?(llmRequest: IRequestContext): Promise<IPluginResult>;
+    onModelError?(llmRequest: IRequestContext): Promise<ILLMPluginResult>;
 
-    afterModel?(llmRequest: IRequestContext): Promise<IPluginResult>;
+    afterModel?(llmRequest: IRequestContext): Promise<ILLMPluginResult>;
 
-    afterChunk?(llmRequest: IRequestContext): Promise<IPluginResult>;
+    afterChunk?(llmRequest: IRequestContext): Promise<ILLMPluginResult>;
 
     detachedAfterResponse?(llmRequest: IRequestContext): Promise<void>;
 
 }
 
 // Plugin execution result
-export interface IPluginResult {
+export interface ILLMPluginResult {
     success: boolean;
     pluginName?: string; // Name of the plugin that produced this result
     status?: number; // HTTP status code for the response in case of error
@@ -62,3 +62,12 @@ export interface IPluginResult {
 
 }
 
+// Backward-compatible aliases (deprecated - use ILLM* versions)
+/** @deprecated Use ILLMPlugin instead */
+export type IPlugin = ILLMPlugin;
+/** @deprecated Use ILLMPluginResult instead */
+export type IPluginResult = ILLMPluginResult;
+/** @deprecated Use ILLMPluginExecution instead */
+export type IPluginExecution = ILLMPluginExecution;
+/** @deprecated Use ILLMPluginPhaseExecution instead */
+export type IPluginPhaseExecution = ILLMPluginPhaseExecution;

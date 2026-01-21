@@ -1,4 +1,4 @@
-import { IPlugin, IRequestContext, IPluginResult } from '@nullplatform/llm-gateway-sdk';
+import { ILLMPlugin, IRequestContext, ILLMPluginResult } from '@nullplatform/llm-gateway-sdk';
 
 export interface MockPluginCallTracker {
   beforeModel: jest.Mock;
@@ -8,17 +8,17 @@ export interface MockPluginCallTracker {
   detachedAfterResponse: jest.Mock;
 }
 
-export class MockPlugin implements IPlugin {
+export class MockPlugin implements ILLMPlugin {
   name: string;
   version: string;
   description: string;
   callTracker: MockPluginCallTracker;
 
   constructor(name: string = 'mock-plugin', options: {
-    beforeModelResult?: IPluginResult;
-    afterModelResult?: IPluginResult;
-    afterChunkResult?: IPluginResult;
-    onModelErrorResult?: IPluginResult;
+    beforeModelResult?: ILLMPluginResult;
+    afterModelResult?: ILLMPluginResult;
+    afterChunkResult?: ILLMPluginResult;
+    onModelErrorResult?: ILLMPluginResult;
     shouldThrow?: string[]; // Array of method names that should throw
   } = {}) {
     this.name = name;
@@ -52,19 +52,19 @@ export class MockPlugin implements IPlugin {
         throw new Error('Method not implemented.');
     }
 
-  async beforeModel(context: IRequestContext): Promise<IPluginResult> {
+  async beforeModel(context: IRequestContext): Promise<ILLMPluginResult> {
     return this.callTracker.beforeModel(context);
   }
 
-  async afterModel(context: IRequestContext): Promise<IPluginResult> {
+  async afterModel(context: IRequestContext): Promise<ILLMPluginResult> {
     return this.callTracker.afterModel(context);
   }
 
-  async afterChunk(context: IRequestContext): Promise<IPluginResult> {
+  async afterChunk(context: IRequestContext): Promise<ILLMPluginResult> {
     return this.callTracker.afterChunk(context);
   }
 
-  async onModelError(context: IRequestContext): Promise<IPluginResult> {
+  async onModelError(context: IRequestContext): Promise<ILLMPluginResult> {
     return this.callTracker.onModelError(context);
   }
 

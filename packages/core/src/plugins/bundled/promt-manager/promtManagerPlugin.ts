@@ -1,4 +1,4 @@
-import {IPlugin, ExtensionMetadata, IRequestContext, IPluginResult, IMessage} from '@nullplatform/llm-gateway-sdk';
+import {ILLMPlugin, ExtensionMetadata, IRequestContext, ILLMPluginResult, IMessage} from '@nullplatform/llm-gateway-sdk';
 
 export enum PromptInjectionMode {
     OVERRIDE = 'override',
@@ -55,7 +55,7 @@ export class PromptManagerPluginConfig {
         required: ['prompt']
     }
 })
-export class PromptManagerPlugin implements IPlugin {
+export class PromptManagerPlugin implements ILLMPlugin {
     private config: PromptManagerPluginConfig;
 
     async configure(config: PromptManagerPluginConfig): Promise<void> {
@@ -89,7 +89,7 @@ export class PromptManagerPlugin implements IPlugin {
         return true;
     }
 
-    async beforeModel(llmRequest: IRequestContext): Promise<IPluginResult> {
+    async beforeModel(llmRequest: IRequestContext): Promise<ILLMPluginResult> {
         try {
             // Determine which prompt to use (main or experiment)
             const {prompt: selectedPrompt, isExperiment} = this.selectPrompt();

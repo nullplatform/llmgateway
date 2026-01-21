@@ -1,4 +1,4 @@
-import {IPlugin, ExtensionMetadata, IRequestContext, IPluginResult} from '@nullplatform/llm-gateway-sdk';
+import {ILLMPlugin, ExtensionMetadata, IRequestContext, ILLMPluginResult} from '@nullplatform/llm-gateway-sdk';
 
 export class ModelRoutingPluginConfig {
     model: string; //simply select
@@ -10,7 +10,7 @@ export class ModelRoutingPluginConfig {
     version: '1.0.0',
     description: 'A plugin for routing between models'
 })
-export class ModelRouterPlugin implements IPlugin {
+export class ModelRouterPlugin implements ILLMPlugin {
     private config: ModelRoutingPluginConfig;
     private fullFallbacks: Array<string> = [];
     async configure(config: ModelRoutingPluginConfig): Promise<void> {
@@ -26,7 +26,7 @@ export class ModelRouterPlugin implements IPlugin {
 
 
 
-    async beforeModel(llmRequest: IRequestContext): Promise<IPluginResult> {
+    async beforeModel(llmRequest: IRequestContext): Promise<ILLMPluginResult> {
         const tryModel = llmRequest.retry_count || 0;
         if (tryModel >= this.fullFallbacks.length) {
             return {
@@ -46,7 +46,7 @@ export class ModelRouterPlugin implements IPlugin {
         return { success: true, context: {...llmRequest, target_model: this.fullFallbacks[tryModel]} };
     }
 
-    async onModelError(llmRequest: IRequestContext): Promise<IPluginResult> {
+    async onModelError(llmRequest: IRequestContext): Promise<ILLMPluginResult> {
         return {
             success: true,
             reevaluateRequest: true,

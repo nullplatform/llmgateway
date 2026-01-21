@@ -7,7 +7,7 @@ import {
     ILLMRequest,
     ILLMResponse,
     IChunkEmitter,
-    IPluginPhaseExecution, LLMModelError
+    ILLMPluginPhaseExecution, LLMModelError
 } from '@nullplatform/llm-gateway-sdk';
 import {Logger} from '../utils/logger.js';
 import {OpenAIRequest} from "../adapters/openai";
@@ -101,11 +101,11 @@ export class OpenAIProvider implements IProvider {
         );
     }
 
-    async executeStreaming(request: ILLMRequest, chunkEmitter: IChunkEmitter): Promise<IPluginPhaseExecution | void> {
+    async executeStreaming(request: ILLMRequest, chunkEmitter: IChunkEmitter): Promise<ILLMPluginPhaseExecution | void> {
         const httpRequest = this.buildOpenAIRequest(request);
         httpRequest.stream_options = { include_usage: true };
         const endpoint = '/chat/completions';
-        let lastPluginExecution: IPluginPhaseExecution | void = null;
+        let lastPluginExecution: ILLMPluginPhaseExecution | void = null;
         try {
             const response = await this.client.post(endpoint, httpRequest, {
                 responseType: 'stream'
@@ -141,7 +141,7 @@ export class OpenAIProvider implements IProvider {
             });
 
             // Wait for stream to complete
-            await new Promise<IPluginPhaseExecution | void>((resolve, reject) => {
+            await new Promise<ILLMPluginPhaseExecution | void>((resolve, reject) => {
                 response.data.on('end', () => { resolve(lastPluginExecution)});
                 response.data.on('error',() => {reject(lastPluginExecution) });
             });
@@ -152,7 +152,7 @@ export class OpenAIProvider implements IProvider {
         }
     }
 
-    private async processStreamLine(line: string, chunkEmitter: IChunkEmitter, lastChunk: any): Promise<IPluginPhaseExecution | void> {
+    private async processStreamLine(line: string, chunkEmitter: IChunkEmitter, lastChunk: any): Promise<ILLMPluginPhaseExecution | void> {
         if (!line.startsWith('data: ')) {
             return;
         }
@@ -177,7 +177,7 @@ export class OpenAIProvider implements IProvider {
         }
     }
 
-    private async emitStreamChunk(chunkEmitter: IChunkEmitter, parsedChunk: any): Promise<IPluginPhaseExecution | void> {
+    private async emitStreamChunk(chunkEmitter: IChunkEmitter, parsedChunk: any): Promise<ILLMPluginPhaseExecution | void> {
         const choice = parsedChunk.choices?.[0];
 
         const response: ILLMResponse = {
@@ -198,7 +198,7 @@ export class OpenAIProvider implements IProvider {
         return await chunkEmitter.onData(response, false);
     }
 
-    private async emitFinalChunk(chunkEmitter: IChunkEmitter, lastChunk: any): Promise<IPluginPhaseExecution | void> {
+    private async emitFinalChunk(chunkEmitter: IChunkEmitter, lastChunk: any): Promise<ILLMPluginPhaseExecution | void> {
 
         let finalResponse: ILLMResponse = null;
 
