@@ -45,3 +45,59 @@ export interface GoogleUserInfo {
 export interface AuthenticatedRequest extends FastifyRequest {
   user: JWTPayload;
 }
+
+/**
+ * API Key item stored in DynamoDB
+ * Primary key pattern: pk=KEY#<uuid>, sk=META
+ * GSI2: gsi2pk=USER#<sub>, gsi2sk=KEY#<created_at> for user's keys
+ * GSI3: gsi3pk=HASH#<sha256>, gsi3sk=KEY for validation lookup
+ */
+export interface ApiKeyItem {
+  pk: string;           // KEY#<uuid>
+  sk: string;           // META
+  gsi2pk: string;       // USER#<google_sub>
+  gsi2sk: string;       // KEY#<created_at>
+  gsi3pk: string;       // HASH#<sha256_hash>
+  gsi3sk: string;       // KEY
+  key_id: string;       // UUID
+  key_hash: string;     // SHA-256 hash
+  key_prefix: string;   // First 12 chars for display (nll_ + 8)
+  name: string;         // User-provided name
+  user_sub: string;     // Owner's Google sub
+  user_email: string;   // Owner's email
+  created_at: string;   // ISO 8601
+  revoked_at?: string;  // ISO 8601 if revoked
+}
+
+/**
+ * API key response for list endpoint (no sensitive data)
+ */
+export interface ApiKey {
+  key_id: string;
+  name: string;
+  key_prefix: string;
+  created_at: string;
+  revoked_at?: string;
+}
+
+/**
+ * Result of creating a new API key (includes full key shown once)
+ */
+export interface CreateKeyResult {
+  key: string;          // Full key (shown once only)
+  key_id: string;
+  name: string;
+  key_prefix: string;
+  created_at: string;
+}
+
+/**
+ * Result of validating an API key
+ */
+export interface ValidateKeyResult {
+  valid: boolean;
+  key_id?: string;
+  key_name?: string;
+  user_email?: string;
+  user_sub?: string;
+}
