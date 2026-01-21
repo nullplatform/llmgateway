@@ -60,7 +60,7 @@ export const config = {
   portalUrl: process.env.PORTAL_URL || 'http://localhost:3000',
 
   // Hardcoded domain restriction for nullplatform
-  allowedDomain: 'nullplatform.com',
+  allowedDomain: 'nullplatform.io',
 } as const;
 
 export type Config = typeof config;
