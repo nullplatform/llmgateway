@@ -1,6 +1,27 @@
 import 'dotenv/config';
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import { config } from './config/index.js';
+import cookiePlugin from './plugins/cookie.js';
+import oauth2Plugin from './plugins/oauth2.js';
+import { authRoutes } from './routes/auth.js';
+import { healthRoutes } from './routes/health.js';
+
+/**
+ * Auth Service - Google OAuth authentication for nullplatform
+ *
+ * This service handles:
+ * - Google OAuth login flow with PKCE
+ * - Domain restriction to @nullplatform.com
+ * - JWT session management via httpOnly cookies
+ * - User storage in DynamoDB
+ *
+ * Plugin registration order matters:
+ * 1. CORS - Enable cross-origin requests from portal
+ * 2. Cookie - Required by OAuth2 for state storage
+ * 3. OAuth2 - Google OAuth flow with PKCE
+ * 4. Routes - Auth and health endpoints
+ */
 
 const fastify = Fastify({
   logger: {
@@ -15,26 +36,47 @@ const fastify = Fastify({
   },
 });
 
-// Health check route
-fastify.get('/health', async () => {
-  return { status: 'ok', timestamp: new Date().toISOString() };
-});
+// Register plugins in correct order
+async function registerPlugins(): Promise<void> {
+  // 1. CORS - Allow credentials from portal
+  await fastify.register(cors, {
+    origin: true,
+    credentials: true,
+  });
 
-// Placeholder for OAuth routes (will be implemented in subsequent plans)
-fastify.get('/', async () => {
-  return {
-    service: 'auth-service',
-    version: '1.0.0',
-    endpoints: {
-      health: '/health',
-      googleAuth: '/auth/google (coming soon)',
-      callback: '/auth/google/callback (coming soon)',
-    },
-  };
-});
+  // 2. Cookie plugin - MUST be before OAuth2
+  await fastify.register(cookiePlugin);
+
+  // 3. OAuth2 plugin - Depends on cookie plugin
+  await fastify.register(oauth2Plugin);
+}
+
+// Register routes
+async function registerRoutes(): Promise<void> {
+  // Health check endpoint
+  await fastify.register(healthRoutes);
+
+  // Auth routes (login, callback, logout, me)
+  await fastify.register(authRoutes);
+
+  // Service info endpoint
+  fastify.get('/', async () => {
+    return {
+      service: 'auth-service',
+      version: '1.0.0',
+      endpoints: {
+        health: '/health',
+        googleAuth: '/auth/google',
+        callback: '/auth/google/callback',
+        logout: '/auth/logout',
+        me: '/auth/me',
+      },
+    };
+  });
+}
 
 // Graceful shutdown handling
-const shutdown = async (signal: string) => {
+const shutdown = async (signal: string): Promise<void> => {
   fastify.log.info(`Received ${signal}, shutting down gracefully...`);
   try {
     await fastify.close();
@@ -50,10 +92,21 @@ process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 
 // Start server
-const start = async () => {
+const start = async (): Promise<void> => {
   try {
+    // Register plugins and routes before starting
+    await registerPlugins();
+    await registerRoutes();
+
     await fastify.listen({ port: config.port, host: '0.0.0.0' });
     fastify.log.info(`Auth service listening on port ${config.port}`);
+    fastify.log.info({
+      endpoints: {
+        health: `http://localhost:${config.port}/health`,
+        login: `http://localhost:${config.port}/auth/google`,
+        me: `http://localhost:${config.port}/auth/me`,
+      },
+    }, 'Available endpoints');
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
