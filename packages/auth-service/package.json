@@ -1,0 +1,47 @@
+{
+  "name": "@nullplatform/auth-service",
+  "version": "1.0.0",
+  "description": "Authentication service for nullplatform with Google OAuth and JWT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "fastify": "^5.2.1",
+    "@fastify/oauth2": "^8.1.0",
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^10.0.1",
+    "jose": "^6.0.10",
+    "google-auth-library": "^9.15.1",
+    "@aws-sdk/client-dynamodb": "^3.712.0",
+    "@aws-sdk/lib-dynamodb": "^3.712.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3",
+    "tsx": "^4.19.2"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md"
+  ],
+  "keywords": [
+    "auth",
+    "oauth",
+    "google",
+    "jwt",
+    "nullplatform"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nullplatform/llmgateway",
+    "directory": "packages/auth-service"
+  },
+  "license": "MIT"
+}
