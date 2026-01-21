@@ -8,6 +8,7 @@ import {RegexHiderPlugin} from "./bundled/regex-hider/regexHiderPlugin.js";
 import {BasicApiKeyAuthPlugin} from "./bundled/basic-apikey-auth/basicApiKeyAuthPlugin.js";
 import {ModelRouterPlugin} from "./bundled/model-router/modelRouterPlugin.js";
 import {PromptManagerPlugin} from "./bundled/promt-manager/promtManagerPlugin";
+import {AuthGatewayPlugin} from "./bundled/auth-gateway/authGatewayPlugin.js";
 
 export class PluginFactory {
     private plugins: Map<string, new (...args: any[]) => ILLMPlugin> = new Map();
@@ -30,6 +31,7 @@ export class PluginFactory {
         this.plugins.set('basic-apikey-auth', BasicApiKeyAuthPlugin);
         this.plugins.set('regex-hider',RegexHiderPlugin)
         this.plugins.set('prompt-manager',PromptManagerPlugin);
+        this.plugins.set('auth-gateway', AuthGatewayPlugin);
 
     }
 
