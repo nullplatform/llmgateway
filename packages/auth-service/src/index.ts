@@ -6,6 +6,7 @@ import cookiePlugin from './plugins/cookie.js';
 import oauth2Plugin from './plugins/oauth2.js';
 import { authRoutes } from './routes/auth.js';
 import { healthRoutes } from './routes/health.js';
+import { apiKeyRoutes } from './routes/apikeys.js';
 
 /**
  * Auth Service - Google OAuth authentication for nullplatform
@@ -59,6 +60,9 @@ async function registerRoutes(): Promise<void> {
   // Auth routes (login, callback, logout, me)
   await fastify.register(authRoutes);
 
+  // API key management routes
+  await fastify.register(apiKeyRoutes);
+
   // Service info endpoint
   fastify.get('/', async () => {
     return {
@@ -70,6 +74,11 @@ async function registerRoutes(): Promise<void> {
         callback: '/auth/google/callback',
         logout: '/auth/logout',
         me: '/auth/me',
+        // API key endpoints
+        createKey: 'POST /api/keys',
+        listKeys: 'GET /api/keys',
+        revokeKey: 'DELETE /api/keys/:keyId',
+        validateKey: 'GET /api/keys/validate',
       },
     };
   });
