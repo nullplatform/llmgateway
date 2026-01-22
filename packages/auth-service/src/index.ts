@@ -1,12 +1,19 @@
 import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { config } from './config/index.js';
 import cookiePlugin from './plugins/cookie.js';
 import oauth2Plugin from './plugins/oauth2.js';
 import { authRoutes } from './routes/auth.js';
 import { healthRoutes } from './routes/health.js';
 import { apiKeyRoutes } from './routes/apikeys.js';
+
+// ESM directory resolution
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Auth Service - Google OAuth authentication for nullplatform
@@ -45,10 +52,17 @@ async function registerPlugins(): Promise<void> {
     credentials: true,
   });
 
-  // 2. Cookie plugin - MUST be before OAuth2
+  // 2. Static file serving - MUST be before routes
+  await fastify.register(fastifyStatic, {
+    root: path.join(__dirname, '..', 'public'),
+    prefix: '/',
+    decorateReply: true,
+  });
+
+  // 3. Cookie plugin - MUST be before OAuth2
   await fastify.register(cookiePlugin);
 
-  // 3. OAuth2 plugin - Depends on cookie plugin
+  // 4. OAuth2 plugin - Depends on cookie plugin
   await fastify.register(oauth2Plugin);
 }
 
@@ -63,24 +77,18 @@ async function registerRoutes(): Promise<void> {
   // API key management routes
   await fastify.register(apiKeyRoutes);
 
-  // Service info endpoint
-  fastify.get('/', async () => {
-    return {
-      service: 'auth-service',
-      version: '1.0.0',
-      endpoints: {
-        health: '/health',
-        googleAuth: '/auth/google',
-        callback: '/auth/google/callback',
-        logout: '/auth/logout',
-        me: '/auth/me',
-        // API key endpoints
-        createKey: 'POST /api/keys',
-        listKeys: 'GET /api/keys',
-        revokeKey: 'DELETE /api/keys/:keyId',
-        validateKey: 'GET /api/keys/validate',
-      },
-    };
+  // SPA fallback - serve index.html for all non-API routes
+  // This must be registered LAST to avoid overriding API routes
+  fastify.setNotFoundHandler((request, reply) => {
+    // Only serve index.html for HTML requests (browser navigation)
+    const acceptsHtml = request.headers.accept?.includes('text/html');
+
+    if (acceptsHtml && !request.url.startsWith('/api') && !request.url.startsWith('/auth')) {
+      return reply.sendFile('index.html');
+    }
+
+    // For API routes or non-HTML requests, return 404
+    reply.status(404).send({ error: 'not_found', message: 'Endpoint not found' });
   });
 }
 
