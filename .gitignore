@@ -6,3 +6,10 @@
 .vscode
 dist/
 node_modules
+
+# Exception: public folder contains source JS/CSS (not compiled)
+!packages/auth-service/public/*.js
+!packages/auth-service/public/*.css
+
+# GSD planning docs (local only)
+.planning/

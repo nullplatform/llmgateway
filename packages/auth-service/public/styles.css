@@ -1,0 +1,306 @@
+/* Reset and base styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  line-height: 1.6;
+  color: #24292f;
+  background: #f6f8fa;
+}
+
+/* Layout */
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.login-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+/* Cards */
+.card {
+  background: white;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.card h1 {
+  margin-bottom: 1rem;
+}
+
+.card p {
+  margin-bottom: 1.5rem;
+  color: #57606a;
+}
+
+/* Typography */
+h1 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Buttons */
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: background 0.2s;
+}
+
+.btn-primary {
+  background: #2da44e;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #2c974b;
+}
+
+.btn-secondary {
+  background: #f6f8fa;
+  color: #24292f;
+  border: 1px solid #d0d7de;
+}
+
+.btn-secondary:hover {
+  background: #f3f4f6;
+}
+
+.btn-danger {
+  background: #cf222e;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #a40e26;
+}
+
+/* Forms */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 400px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-weight: 500;
+  text-align: left;
+}
+
+input {
+  padding: 0.5rem;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+input:focus {
+  outline: none;
+  border-color: #0969da;
+  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Tables */
+.keys-table {
+  width: 100%;
+  margin-top: 1.5rem;
+  background: white;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  border-collapse: collapse;
+  overflow: hidden;
+}
+
+.keys-table th,
+.keys-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #d0d7de;
+}
+
+.keys-table th {
+  background: #f6f8fa;
+  font-weight: 600;
+}
+
+.keys-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.keys-table tbody tr:hover {
+  background: #f6f8fa;
+}
+
+code {
+  background: #f6f8fa;
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 0.875rem;
+}
+
+/* Key display */
+.key-display {
+  background: #f6f8fa;
+  padding: 1rem;
+  border-radius: 6px;
+  margin: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.key-display code {
+  word-break: break-all;
+  background: white;
+  padding: 0.75rem;
+  border: 1px solid #d0d7de;
+  display: block;
+  text-align: left;
+}
+
+.key-info {
+  text-align: left;
+  margin: 1rem 0;
+  padding: 1rem;
+  background: #f6f8fa;
+  border-radius: 6px;
+}
+
+/* Dialogs */
+dialog {
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: 2rem;
+  max-width: 500px;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  justify-content: flex-end;
+}
+
+/* Header */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #d0d7de;
+}
+
+header div {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+header span {
+  color: #57606a;
+}
+
+/* States */
+.empty-state {
+  color: #57606a;
+  margin-top: 1.5rem;
+  padding: 2rem;
+  background: white;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.error {
+  color: #cf222e;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #ffebe9;
+  border: 1px solid #cf222e;
+  border-radius: 6px;
+}
+
+.warning {
+  color: #9a6700;
+  background: #fff8c5;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin: 0.5rem 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .page {
+    padding: 1rem;
+  }
+
+  .card {
+    margin: 2rem auto;
+    padding: 1.5rem;
+  }
+
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .keys-table {
+    font-size: 0.875rem;
+  }
+
+  .keys-table th,
+  .keys-table td {
+    padding: 0.5rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  dialog {
+    margin: 1rem;
+    width: calc(100% - 2rem);
+  }
+}
