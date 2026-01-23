@@ -12,7 +12,7 @@ const logger = new Logger();
 program
     .name('llm-gateway')
     .description('LLM Gateway - Proxy server for Large Language Models')
-    .version('1.0.0');
+    .version('2.0.4');
 
 program
     .command('start')

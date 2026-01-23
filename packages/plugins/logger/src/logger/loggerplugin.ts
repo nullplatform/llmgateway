@@ -13,7 +13,7 @@ export class LoggerPluginConfig {
 export class LoggerPlugin implements ILLMPlugin {
     async configure(config: LoggerPluginConfig): Promise<void> {
 
-    }
+}
 
     async beforeModel(llmRequest: IRequestContext): Promise<ILLMPluginResult> {
         // Log the request details

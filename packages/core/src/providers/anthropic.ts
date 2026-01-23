@@ -211,7 +211,11 @@ export class AnthropicProvider implements IProvider {
             tools: request?.tools?.map(tool => ({
                 name: tool.function.name,
                 description: tool.function.description || '',
-                input_schema: tool.function.parameters || {}
+                input_schema: {
+                    type: 'object',
+                    properties: {},
+                    ...tool.function.parameters
+                }
             }))
         };
 
@@ -435,6 +439,7 @@ export class AnthropicProvider implements IProvider {
                             total_tokens: internalUsage.input_tokens !== undefined && internalUsage.output_tokens !==undefined
                                 ? internalUsage.input_tokens + internalUsage.output_tokens : undefined
                         }
+                        this.logger.debug('Anthropic streaming usage extracted', { eventType, usage, internalUsage });
                     }
                     await chunkEmitter.onData({
                         id: parsedChunk?.message?.id,
@@ -451,7 +456,8 @@ export class AnthropicProvider implements IProvider {
                     break;
 
                 case 'message_stop':
-                    return await chunkEmitter.onData(undefined, true); // Emit final chunk
+                    // Emit empty object instead of undefined to ensure mergeChunks works properly
+                    return await chunkEmitter.onData({} as ILLMResponse, true); // Emit final chunk
 
                 default:
                     // Log unknown event types for debugging
