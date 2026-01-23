@@ -439,7 +439,7 @@ export class AnthropicProvider implements IProvider {
                             total_tokens: internalUsage.input_tokens !== undefined && internalUsage.output_tokens !==undefined
                                 ? internalUsage.input_tokens + internalUsage.output_tokens : undefined
                         }
-                        this.logger.debug('Anthropic streaming usage extracted', { eventType, usage, internalUsage });
+                        this.logger.debug('Anthropic streaming usage extracted', { eventType, usage });
                     }
                     await chunkEmitter.onData({
                         id: parsedChunk?.message?.id,
