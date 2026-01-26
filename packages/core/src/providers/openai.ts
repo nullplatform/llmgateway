@@ -222,9 +222,25 @@ export class OpenAIProvider implements IProvider {
         return await chunkEmitter.onData(finalResponse, true);
     }
 
+    /**
+     * Determines if a model requires max_completion_tokens instead of max_tokens.
+     * Newer OpenAI models (o1 series, gpt-4o, etc.) use max_completion_tokens.
+     */
+    private requiresMaxCompletionTokens(model: string): boolean {
+        const modelLower = model.toLowerCase();
+        return modelLower.startsWith('o1') ||
+               modelLower.startsWith('o3') ||
+               modelLower.includes('gpt-4o') ||
+               modelLower.includes('gpt-4.1') ||
+               modelLower.includes('gpt-4-turbo');
+    }
+
     buildOpenAIRequest(request: ILLMRequest): OpenAIRequest {
+        const model = this.config.bypassModel ? request.model : this.config.model;
+        const useMaxCompletionTokens = this.requiresMaxCompletionTokens(model);
+
         return {
-            model: this.config.bypassModel ? request.model : this.config.model,
+            model,
             messages: request.messages.map(msg => ({
                 role: msg.role,
                 content: msg.content,
@@ -233,7 +249,8 @@ export class OpenAIProvider implements IProvider {
                 tool_call_id: msg.tool_call_id
             })),
             temperature: request.temperature,
-            max_tokens: request.max_tokens,
+            max_tokens: useMaxCompletionTokens ? undefined : request.max_tokens,
+            max_completion_tokens: useMaxCompletionTokens ? request.max_tokens : undefined,
             top_p: request.top_p > 0 && request.top_p < 1? request.top_p : undefined,
             frequency_penalty: request.frequency_penalty,
             presence_penalty: request.presence_penalty,
